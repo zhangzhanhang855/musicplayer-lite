@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>VOID DJ MK-VI | Automation Station</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container" style="width: 1100px; height: 700px;">
+        <div id="win-content-main" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <script>
+        // 模拟宿主窗口对象，防止原脚本报错
+        const winObj = { id: 'main', onDestroy: () => {} };
+
+        // 以下为原 JSON 中 script 字段的完整、未删减逻辑
+        const content = document.getElementById('win-content-' + winObj.id);
+
+        // 注入组件样式以适配多窗口隔离
+        const styleEl = document.createElement('style');
+        styleEl.innerHTML = `#win-content-${winObj.id} { --neon: #00f2ff; font-family: 'Inter', sans-serif; background: #050505; color: #fff; } #win-content-${winObj.id} .dj-system { display: grid; grid-template-columns: 1.5fr 200px 1.2fr; gap: 10px; height: 100%; width: 100%; box-sizing: border-box; } #win-content-${winObj.id} .module { background: #0d0d0d; border: 1px solid #222; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; position: relative; } #win-content-${winObj.id} .knob-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; cursor: ns-resize; touch-action: none; } #win-content-${winObj.id} .knob-physical { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #444, #111); border: 3px solid #000; position: relative; transform: rotate(0deg); transition: transform 0.05s linear; } #win-content-${winObj.id} .knob-physical::after { content: ''; position: absolute; top: 5px; left: 50%; width: 3px; height: 8px; background: var(--neon); transform: translateX(-50%); border-radius: 2px; } #win-content-${winObj.id} .fader-track { width: 14px; height: 160px; background: #000; border-radius: 7px; position: relative; border: 1px solid #222; cursor: ns-resize; touch-action: none; } #win-content-${winObj.id} .fader-handle { width: 40px; height: 44px; background: linear-gradient(180deg, #444 0%, #222 100%); border-radius: 4px; position: absolute; left: -13px; bottom: 50%; border: 1px solid #000; box-shadow: 0 8px 16px rgba(0,0,0,0.5); transition: bottom 0.05s linear; } #win-content-${winObj.id} .pad { height: 42px; background: #1a1a1a; border-radius: 4px; border-bottom: 4px solid #000; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 900; color: #555; transition: all 0.05s; } #win-content-${winObj.id} .pad.lit { background: var(--neon); color: #000; border-bottom: 0; transform: translateY(3px); box-shadow: 0 0 25px var(--neon); } #win-content-${winObj.id} .hardware-btn { background: linear-gradient(180deg, #252525 0%, #111 100%); border: 1px solid #333; border-radius: 4px; color: #aaa; font-family: 'Share Tech Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: all 0.1s; } #win-content-${winObj.id} .vinyl-wrap { width: 280px; height: 280px; border-radius: 50%; background: #050505; display: flex; align-items: center; justify-content: center; cursor: grab; position: relative; touch-action: none; } #win-content-${winObj.id} .vinyl-disk { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, #252525 0%, #0a0a0a 60%, #000 100%); border: 10px solid #2a2a2a; position: relative; pointer-events: none; box-shadow: inset 0 0 15px #000, 0 10px 30px rgba(0,0,0,0.8); } #win-content-${winObj.id} .vinyl-disk::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0, transparent 2px, rgba(255,255,255,0.02) 3px); } #win-content-${winObj.id} .art-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border-radius: 50%; border: 4px solid #333; background: #111; z-index: 10; overflow: hidden; pointer-events: none; box-shadow: 0 0 0 1px #000, 0 0 0 2.5px var(--neon), 0 8px 20px rgba(0,0,0,0.6); } #win-content-${winObj.id} #cover-art-${winObj.id} { width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; transition: opacity 0.4s ease; } #win-content-${winObj.id} #cover-art-${winObj.id}.loaded { opacity: 1; } #win-content-${winObj.id}.is-playing .vinyl-disk { animation: rotate-v-${winObj.id} 6s linear infinite; } #win-content-${winObj.id}.is-playing .art-center { animation: rotate-a-${winObj.id} 6s linear infinite; } @keyframes rotate-v-${winObj.id} { to { transform: rotate(360deg); } } @keyframes rotate-a-${winObj.id} { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } } #win-content-${winObj.id} .lcd-main { background: #050a05; border-radius: 4px; padding: 12px; font-family: 'Share Tech Mono', monospace; box-shadow: inset 0 0 40px #000; border: 2px solid #000; }`;
+        content.appendChild(styleEl);
+
+        // 构造 HTML 核心骨架
+        content.innerHTML += '<div class="dj-system p-3 bg-[#161616] border-4 border-[#222] rounded-xl font-sans select-none"><section class="module deck-section p-4"><div class="lcd-main"><div class="flex justify-between text-[9px] opacity-30 mb-1 uppercase"><span>Engine v2 [<span class="text-cyan-400" id="lcd-mode">LIST</span>]</span><span>Deck A</span></div><div class="text-xl font-bold tracking-tighter text-cyan-400 truncate" id="title">READY</div><div class="flex justify-between mt-4"><div class="text-2xl font-black italic font-mono" id="cur-time">00:00:00</div><div class="text-right text-[10px] text-cyan-800 font-mono">BPM: 128.00</div></div></div><div class="flex-1 flex items-center justify-center my-4"><div class="vinyl-wrap"><div class="vinyl-disk"></div><div class="art-center"><div id="cover-art-' + winObj.id + '"></div><span class="absolute inset-0 flex items-center justify-center text-3xl" id="cover-emoji">💿</span></div></div></div><div class="flex justify-between items-center"><div class="flex gap-2 items-center"><button class="w-14 h-14 bg-black border border-white/10 rounded-full flex items-center justify-center shadow-xl hover:border-cyan-500 transition-colors focus:outline-none" id="btn-play"><div class="w-0 h-0 border-y-[8px] border-y-transparent border-l-[14px] border-l-white ml-0.5" id="play-icon"></div></button><button class="w-12 h-10 hardware-btn flex items-center justify-center" id="btn-next">NEXT</button><button class="px-2 h-10 hardware-btn border-cyan-500/30 text-cyan-400 text-[9px]" id="mode-btn">MODE: LIST</button></div><div class="flex flex-col items-center gap-1"><div class="fader-track h-20 w-8"><div class="fader-handle w-8 h-5 left-[-10px] bottom-[50%]"></div></div><span class="text-[8px] opacity-20 font-black uppercase">Pitch</span></div></div></section><section class="module mixer-section p-4 flex flex-col items-center justify-center gap-2"><div class="knob-container"><div class="knob-physical"></div><span class="text-[8px] font-bold opacity-30 mt-0.5 uppercase">Gain</span></div><div class="knob-container"><div class="knob-physical" style="transform: rotate(45deg);"></div><span class="text-[8px] font-bold opacity-30 mt-0.5 uppercase">High</span></div><div class="knob-container"><div class="knob-physical" style="transform: rotate(-20deg);"></div><span class="text-[8px] font-bold opacity-30 mt-0.5 uppercase">Low</span></div><div class="fader-track mt-2"><div class="fader-handle"></div></div><span class="text-[8px] font-black opacity-20 uppercase">Master</span></section><aside class="module crate-section flex flex-col"><div class="grid grid-cols-4 gap-1 p-2"><div class="pad">CUE 1</div><div class="pad">CUE 2</div><div class="pad">LOOP</div><div class="pad">FX</div></div><div class="p-2 bg-black/40 border-y border-white/5"><div class="flex gap-1 overflow-x-auto no-scrollbar mb-2 pb-1" id="playlist-nav"></div><input class="w-full bg-black border border-white/10 p-2 text-[10px] outline-none focus:border-cyan-500/50 text-white" id="search-input" placeholder="FIND TRACK..." type="text"></div><div class="flex-1 overflow-y-auto"><ul id="track-list"></ul></div><div class="p-2 bg-black/60 border-t border-white/5"><p class="text-[8px] text-cyan-600/50 font-mono italic uppercase">Broadcast Active</p></div></aside></div><audio id="player-audio-' + winObj.id + '"></audio>';
+
+        // 获取局部窗口内部 DOM 引用
+        const audio = content.querySelector('#player-audio-' + winObj.id);
+        const titleEl = content.querySelector('#title');
+        const curTimeEl = content.querySelector('#cur-time');
+        const playIcon = content.querySelector('#play-icon');
+        const btnPlay = content.querySelector('#btn-play');
+        const btnNext = content.querySelector('#btn-next');
+        const btnMode = content.querySelector('#mode-btn');
+        const lcdMode = content.querySelector('#lcd-mode');
+        const navContainer = content.querySelector('#playlist-nav');
+        const listContainer = content.querySelector('#track-list');
+        const searchInput = content.querySelector('#search-input');
+        const artEl = content.querySelector('#cover-art-' + winObj.id);
+        const emjEl = content.querySelector('#cover-emoji');
+        const pads = content.querySelectorAll('.pad');
+
+        // 初始化沙盒状态机
+        const G = { user: 'zhangzhanhang855', repo: 'musiconly' };
+        let playlists = {};
+        let currentPlaylist = 'Root';
+        let filteredTracks = [];
+        let curIdx = 0;
+        let loopMode = 'list';
+        let currentCoverObjectURL = null;
+
+        // 安全加载第三方标签解析库
+        if (!window.jsmediatags) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js';
+            document.head.appendChild(script);
+        }
+
+        // 销毁监听管理队列，防范宿主全局环境污染
+        const activeListeners = [];
+        function bindScopedInteraction(targets, type, callback) {
+            targets.forEach(el => {
+                let isMoving = false;
+                let startPos = 0;
+
+                const start = (e) => {
+                    isMoving = true;
+                    startPos = e.clientY || e.touches?.[0]?.clientY || 0;
+                    e.preventDefault();
+                };
+
+                const move = (e) => {
+                    if (!isMoving) return;
+                    let currentPos = e.clientY || e.touches?.[0]?.clientY || 0;
+                    let delta = startPos - currentPos;
+                    callback(el, delta, currentPos);
+                    if (type === 'fader') startPos = currentPos;
+                };
+
+                const end = () => { isMoving = false; };
+
+                el.addEventListener('mousedown', start);
+                el.addEventListener('touchstart', start, { passive: false });
+                window.addEventListener('mousemove', move);
+                window.addEventListener('touchmove', move, { passive: false });
+                window.addEventListener('mouseup', end);
+                window.addEventListener('touchend', end);
+
+                activeListeners.push(
+                    { target: el, event: 'mousedown', handler: start },
+                    { target: el, event: 'touchstart', handler: start },
+                    { target: window, event: 'mousemove', handler: move },
+                    { target: window, event: 'touchmove', handler: move },
+                    { target: window, event: 'mouseup', handler: end },
+                    { target: window, event: 'touchend', handler: end }
+                );
+            });
+        }
+
+        // 绑定推子与旋钮的底层交互
+        bindScopedInteraction(content.querySelectorAll('.knob-container'), 'knob', (el, delta) => {
+            const knob = el.querySelector('.knob-physical');
+            let currentRotation = parseInt(knob.style.transform.replace('rotate(', '').replace('deg)', '')) || 0;
+            let newRot = Math.max(-150, Math.min(150, currentRotation + delta));
+            knob.style.transform = 'rotate(' + newRot + 'deg)';
+        });
+
+        bindScopedInteraction(content.querySelectorAll('.fader-track'), 'fader', (el, delta, currentY) => {
+            const handle = el.querySelector('.fader-handle');
+            const rect = el.getBoundingClientRect();
+            let percent = 1 - ((currentY - rect.top) / rect.height);
+            percent = Math.max(0, Math.min(1, percent));
+            handle.style.bottom = (percent * 100) + '%';
+        });
+
+        // 打击垫反馈控制
+        pads.forEach(pad => {
+            pad.onclick = () => {
+                pad.classList.add('lit');
+                setTimeout(() => pad.classList.remove('lit'), 100);
+            };
+        });
+
+        // 循环模式硬件切换
+        const toggleLoopMode = () => {
+            const modes = ['list', 'random', 'single'];
+            let nextIndex = (modes.indexOf(loopMode) + 1) % modes.length;
+            loopMode = modes[nextIndex];
+            
+            btnMode.innerText = 'MODE: ' + loopMode.toUpperCase();
+            lcdMode.innerText = loopMode === 'random' ? 'RAND' : (loopMode === 'single' ? 'SGLE' : 'LIST');
+            
+            btnMode.style.borderColor = 'var(--neon)';
+            btnMode.style.boxShadow = '0 0 15px var(--neon)';
+            setTimeout(() => {
+                btnMode.style.borderColor = 'rgba(6, 182, 212, 0.3)';
+                btnMode.style.boxShadow = 'none';
+            }, 150);
+        };
+        btnMode.onclick = toggleLoopMode;
+
+        // 重新构造无斜杠正规化处理函数 (修复了从 JSON 提取到 JS 时的正则转义问题)
+        const filterAudio = (items) => {
+            const audioRegex = new RegExp('\\.(mp3|flac|wav|m4a)$', 'i');
+            const extRegex = new RegExp('\\.[^/.]+$', '');
+            return items.filter(f => audioRegex.test(f.name)).map(f => ({
+                t: f.name.replace(extRegex, ''), u: f.download_url
+            }));
+        };
+
+        const renderNav = () => {
+            navContainer.innerHTML = Object.keys(playlists).map(name => 
+                `<button class="text-[9px] px-2 py-0.5 border border-white/10 hover:bg-white/5 uppercase whitespace-nowrap btn-nav" data-name="${name}">${name}</button>`
+            ).join('');
+            
+            navContainer.querySelectorAll('.btn-nav').forEach(btn => {
+                btn.onclick = () => switchPlaylist(btn.dataset.name);
+            });
+        };
+
+        // 彻底废除单引号转义，改用 ES6 反引号模板字符串进行纯净解析
+        const renderList = () => {
+            listContainer.innerHTML = filteredTracks.map((s, i) => {
+                const activeClass = curIdx === i ? 'text-cyan-400 bg-cyan-900/10' : 'text-gray-400';
+                const numStr = String(i + 1).padStart(2, '0');
+                return `<li class="track-item p-2 border-b border-white/5 text-[10px] font-mono cursor-pointer ${activeClass}" data-idx="${i}">${numStr} . ${s.t}</li>`;
+            }).join('');
+
+            listContainer.querySelectorAll('.track-item').forEach(item => {
+                item.onclick = () => executeLoad(parseInt(item.dataset.idx), true);
+            });
+        };
+
+        const switchPlaylist = (name) => {
+            currentPlaylist = name;
+            filteredTracks = [...playlists[name]];
+            renderList();
+            if (filteredTracks.length > 0) executeLoad(0, false);
+        };
+
+        const executeLoad = (idx, auto) => {
+            if (filteredTracks.length === 0) return;
+            curIdx = idx;
+            const song = filteredTracks[curIdx];
+            
+            audio.src = song.u;
+            audio.load();
+            titleEl.innerText = song.t;
+
+            artEl.classList.remove('loaded');
+            artEl.style.backgroundImage = 'none';
+            emjEl.style.opacity = '1';
+
+            if (currentCoverObjectURL) {
+                URL.revokeObjectURL(currentCoverObjectURL);
+                currentCoverObjectURL = null;
+            }
+
+            if (auto) {
+                audio.play().catch(e => console.log('Wait gesture:', e));
+            }
+
+            fetch(song.u)
+                .then(res => { if (!res.ok) throw new Error(); return res.blob(); })
+                .then(audioBlob => {
+                    if (!window.jsmediatags) return;
+                    new window.jsmediatags.Reader(audioBlob).read({
+                        onSuccess: (tag) => {
+                            const pic = tag.tags.picture;
+                            if (pic) {
+                                const byteArray = new Uint8Array(pic.data);
+                                const coverBlob = new Blob([byteArray], { type: pic.format });
+                                currentCoverObjectURL = URL.createObjectURL(coverBlob);
+                                artEl.style.backgroundImage = `url(${currentCoverObjectURL})`;
+                                artEl.classList.add('loaded');
+                                emjEl.style.opacity = '0';
+                            }
+                        },
+                        onError: (err) => console.log('No metadata cover')
+                    });
+                })
+                .catch(err => console.log('Cover fetch suspended...'));
+
+            renderList();
+        };
+
+        // 核心连续播放控制流
+        audio.onended = () => {
+            if (filteredTracks.length === 0) return;
+            if (loopMode === 'single') {
+                executeLoad(curIdx, true);
+            } else if (loopMode === 'random') {
+                let nextIndex = Math.floor(Math.random() * filteredTracks.length);
+                if (filteredTracks.length > 1 && nextIndex === curIdx) {
+                    nextIndex = (nextIndex + 1) % filteredTracks.length;
+                }
+                executeLoad(nextIndex, true);
+            } else {
+                let nextIndex = (curIdx + 1) % filteredTracks.length;
+                executeLoad(nextIndex, true);
+            }
+        };
+
+        // 音频反馈连击器
+        btnPlay.onclick = () => { audio.paused ? audio.play() : audio.pause(); };
+        btnNext.onclick = () => { executeLoad((curIdx + 1 + filteredTracks.length) % filteredTracks.length, true); };
+
+        audio.onplay = () => {
+            content.classList.add('is-playing');
+            playIcon.style.borderLeftColor = '#00f2ff';
+        };
+        audio.onpause = () => {
+            content.classList.remove('is-playing');
+            playIcon.style.borderLeftColor = '#fff';
+        };
+        audio.ontimeupdate = () => {
+            let s = audio.currentTime;
+            if (isNaN(s)) {
+                curTimeEl.innerText = '00:00:00';
+                return;
+            }
+            let m = Math.floor(s / 60), sec = Math.floor(s % 60), ms = Math.floor((s % 1) * 100);
+            curTimeEl.innerText = m.toString().padStart(2, '0') + ':' + sec.toString().padStart(2, '0') + ':' + ms.toString().padStart(2, '0');
+        };
+
+        // 搜索监听过滤器
+        searchInput.oninput = () => {
+            const val = searchInput.value.toLowerCase();
+            filteredTracks = playlists[currentPlaylist].filter(s => s.t.toLowerCase().includes(val));
+            renderList();
+        };
+
+        // 主动拉取远端 GitHub 仓库数据资源
+        async function loadLibrary() {
+            try {
+                titleEl.innerText = 'CONNECTING...';
+                const res = await fetch('https://api.github.com/repos/' + G.user + '/' + G.repo + '/contents/');
+                const items = await res.json();
+                playlists['Root'] = filterAudio(items);
+                const folders = items.filter(i => i.type === 'dir');
+                for (let f of folders) {
+                    const subData = await (await fetch(f.url)).json();
+                    playlists[f.name] = filterAudio(subData);
+                }
+                renderNav();
+                switchPlaylist('Root');
+            } catch (e) {
+                titleEl.innerText = 'IO ERROR';
+            }
+        }
+        loadLibrary();
+
+        // 多窗口宿主垃圾清除器
+        winObj.onDestroy = () => {
+            audio.pause();
+            audio.src = '';
+            if (currentCoverObjectURL) URL.revokeObjectURL(currentCoverObjectURL);
+            activeListeners.forEach(item => {
+                item.target.removeEventListener(item.event, item.handler);
+            });
+        };
+    </script>
+</body>
+</html>
