@@ -33,32 +33,30 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 
         /* =========================================
-           全局网格布局 (释放底部空间给 Deck/Mixer)
+           全局网格布局 (移除 Footer，全给打碟区)
            ========================================= */
         #app-container {
             flex: 1; display: grid; position: relative;
-            grid-template-columns: 1fr 280px 1fr; /* Mixer稍微加宽 */
-            grid-template-rows: 50px 1fr 40px;    /* 释放出的1fr给打碟区，底部40px留给触发栏 */
+            grid-template-columns: 1fr 280px 1fr;
+            grid-template-rows: 50px 1fr; /* 只保留顶栏和主体 */
             grid-template-areas: 
                 "header header header"
-                "deck-a mixer deck-b"
-                "footer footer footer";
+                "deck-a mixer deck-b";
             gap: 2px; background: #000; padding: 2px;
             opacity: 0; transition: opacity 1s;
         }
 
-        .area-header { grid-area: header; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); z-index: 20; }
+        .area-header { grid-area: header; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); z-index: 60; } /* 提高层级确保按钮始终可见 */
         .area-deck-a { grid-area: deck-a; background: var(--panel-bg); display: flex; flex-direction: column; border-top: 3px solid var(--neon-a); }
         .area-deck-b { grid-area: deck-b; background: var(--panel-bg); display: flex; flex-direction: column; border-top: 3px solid var(--neon-b); }
         .area-mixer { grid-area: mixer; background: #0a0a0c; border-left: 1px solid #000; border-right: 1px solid #000; display: flex; flex-direction: column; border-top: 3px solid var(--neon-mix); }
-        .area-footer { grid-area: footer; background: #050505; display: flex; align-items: center; justify-content: center; z-index: 20; border-top: 1px solid var(--panel-border); }
 
         /* =========================================
            全屏曲库遮罩 (Drawer Modal)
            ========================================= */
         .area-lib { 
             position: absolute; 
-            top: 50px; bottom: 40px; left: 0; right: 0;
+            top: 50px; bottom: 0; left: 0; right: 0; /* 到底部 */
             z-index: 50; 
             background: rgba(10, 10, 13, 0.92);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
@@ -103,7 +101,6 @@
         .fader-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; touch-action: none; }
         .fader-track { width: 10px; background: #000; border-radius: 5px; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,1), 0 1px 0 rgba(255,255,255,0.1); border: 1px solid #1a1a1a; }
         .fader-track::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #222; }
-        /* 放大了推子的尺寸 */
         .fader-track.vol { height: 260px; margin: 20px 0; }
         .fader-track.pitch { height: 280px; margin: 15px 0; }
         .fader-track.cross { width: 220px; height: 12px; margin: 0; }
@@ -129,7 +126,6 @@
         .pad-hw.active.pad-b { background: #440022; color: #fff; box-shadow: 0 0 20px var(--neon-b); }
         .pad-hw.active.pad-b::before { background: var(--neon-b); box-shadow: 0 0 10px var(--neon-b); }
 
-        /* 放大的打碟转盘 */
         .jog-container { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
         .jog-wheel { width: min(320px, 90%); aspect-ratio: 1/1; border-radius: 50%; background: #050505; box-shadow: 0 15px 30px rgba(0,0,0,0.9), inset 0 2px 5px rgba(255,255,255,0.1); position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; }
         .jog-ring-outer { position: absolute; inset: 0; border-radius: 50%; border: 15px solid #1a1a1a; background: conic-gradient(#111, #222, #111, #222, #111); box-shadow: inset 0 0 15px #000; pointer-events: none; }
@@ -145,7 +141,6 @@
         
         #boot-screen { position: fixed; inset: 0; background: #050505; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Share Tech Mono', monospace; color: #0f0; }
 
-        /* 曲库内部 UI 优化大字体 */
         .lib-folder { font-size: 14px; padding: 15px; color: #ccc; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
         .lib-folder:hover { background: rgba(255,255,255,0.1); color: #fff; }
         .lib-track-row { transition: background 0.2s; }
@@ -158,13 +153,13 @@
                 display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
             }
             .area-deck-a, .area-deck-b, .area-mixer { flex-shrink: 0; border-radius: 8px; margin-bottom: 10px; }
-            #main-scroll-area { flex: 1; overflow-y: auto; padding-bottom: 60px; } /* 留出底部栏位置 */
-            .area-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 50px; }
-            .area-lib { flex-direction: column; top: 50px; bottom: 50px; }
+            #main-scroll-area { flex: 1; overflow-y: auto; padding-bottom: 0px; } /* 取消原底部间距 */
+            .area-lib { flex-direction: column; top: 50px; bottom: 0; }
             .area-lib > div:first-child { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid var(--panel-border); }
             .jog-wheel { width: 220px; }
             .fader-track.vol { height: 180px; }
             .fader-track.pitch { height: 200px; }
+            #btn-toggle-lib { font-size: 9px; padding-left: 8px; padding-right: 8px; } /* 小屏按钮缩小 */
         }
     </style>
 </head>
@@ -181,7 +176,7 @@
         <header class="area-header flex items-center px-4 justify-between hardware-panel">
             <div class="flex items-center gap-4">
                 <div class="text-xl font-black italic tracking-widest text-white">VOID<span class="text-gray-500 font-normal">PRO</span></div>
-                <div class="lcd-screen w-36 h-7 flex items-center justify-between px-2 text-[10px] text-cyan-400">
+                <div class="lcd-screen w-36 h-7 items-center justify-between px-2 text-[10px] text-cyan-400 hidden md:flex">
                     <span>CPU</span><span id="sys-cpu">12%</span>
                     <span>MEM</span><span id="sys-mem">140M</span>
                 </div>
@@ -189,14 +184,15 @@
             <div class="flex-1 mx-6 h-8 bg-black border border-gray-800 rounded relative overflow-hidden hidden md:block" id="osc-container">
                 <canvas id="canvas-master-osc" class="absolute inset-0 w-full h-full"></canvas>
             </div>
-            <div class="flex gap-3">
-                <button class="btn-hw px-3 h-7 text-[10px] text-red-500 active glow-b" id="btn-power">MAX POWER</button>
-                <div class="lcd-screen px-3 h-7 flex items-center text-orange-400 text-xs font-bold" id="master-clock">00:00</div>
+            
+            <div class="flex gap-2 items-center">
+                <button class="btn-hw px-2 md:px-3 h-7 text-[9px] md:text-[10px] text-red-500 active glow-b" id="btn-power">MAX POWER</button>
+                <div class="lcd-screen px-3 h-7 flex items-center text-orange-400 text-xs font-bold hidden sm:flex" id="master-clock">00:00</div>
+                <button id="btn-toggle-lib" class="btn-hw px-4 h-7 text-cyan-400 text-[10px] md:text-xs font-bold tracking-widest rounded border border-[#223] hover:border-cyan-500 transition-all">LIBRARY</button>
             </div>
         </header>
 
         <div id="main-scroll-area" class="md:contents">
-            
             <main class="area-deck-a relative">
                 <div class="h-32 p-4 border-b border-gray-800 flex flex-col gap-2">
                     <div class="lcd-screen lcd-glow-a flex-1 p-3 flex flex-col relative">
@@ -370,7 +366,6 @@
             <div class="w-64 border-r border-gray-800/50 flex flex-col bg-black/40">
                 <div class="h-12 border-b border-gray-800/50 flex items-center px-4 justify-between bg-black/60">
                     <span class="text-sm font-bold text-gray-300">PLAYLISTS</span>
-                    <button class="text-gray-500 hover:text-white md:hidden" id="btn-close-lib-mobile">✕</button>
                 </div>
                 <div class="flex-1 overflow-y-auto" id="lib-tree">
                     </div>
@@ -379,7 +374,7 @@
             <div class="flex-1 flex flex-col bg-transparent relative" id="lib-dropzone">
                 <div class="h-12 border-b border-gray-800/50 bg-black/60 flex items-center px-4 justify-between">
                     <input type="text" id="lib-search" class="w-64 bg-black/50 border border-gray-600 text-white text-sm px-3 py-1.5 rounded outline-none focus:border-cyan-500 transition-colors" placeholder="Search track...">
-                    <span class="text-xs text-green-500 animate-pulse font-mono bg-black/50 px-2 py-1 rounded" id="net-status">INIT SYNC...</span>
+                    <span class="text-xs text-green-500 animate-pulse font-mono bg-black/50 px-2 py-1 rounded hidden sm:block" id="net-status">INIT SYNC...</span>
                 </div>
                 <div class="absolute inset-0 top-12 flex items-center justify-center text-gray-400 text-3xl font-bold font-mono tracking-widest pointer-events-none opacity-20">DROP AUDIO FILE HERE</div>
                 <div class="flex-1 overflow-y-auto">
@@ -393,17 +388,13 @@
             </div>
         </aside>
 
-        <footer class="area-footer">
-            <button id="btn-toggle-lib" class="btn-hw px-12 h-8 text-cyan-400 font-bold tracking-[0.2em] rounded border border-[#223] hover:border-cyan-500 transition-all">▲ BROWSE LIBRARY ▲</button>
-        </footer>
-
     </div>
 
     <audio id="audio-A" crossorigin="anonymous"></audio>
     <audio id="audio-B" crossorigin="anonymous"></audio>
 
     <script>
-        const bootSeq = ["INIT KERNEL V8.0.2...", "ALLOCATING LARGE JOGWHEELS...", "CONNECTING GITHUB API...", "SYSTEM READY."];
+        const bootSeq = ["INIT KERNEL V8.0.3...", "MAXIMIZING JOGWHEELS...", "CONNECTING GITHUB API...", "SYSTEM READY."];
         async function runBoot() {
             const out = document.getElementById('term-output');
             for(let i=0; i<bootSeq.length; i++) {
@@ -654,32 +645,37 @@
                 }
                 
                 let d = new Date();
-                document.getElementById('master-clock').innerText = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+                const clock = document.getElementById('master-clock');
+                if(clock) clock.innerText = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
             }
         };
 
         const ui = {
             bindAll() {
-                // 曲库抽屉唤出/关闭逻辑
+                // ==========================================
+                // 右上角的曲库呼出 / 关闭逻辑
+                // ==========================================
                 const toggleLib = () => {
                     const libEl = document.querySelector('.area-lib');
                     const btn = document.getElementById('btn-toggle-lib');
                     libEl.classList.toggle('open');
+                    
                     if(libEl.classList.contains('open')) {
-                        btn.innerText = '▼ CLOSE LIBRARY ▼';
-                        btn.classList.add('active', 'glow-a');
+                        btn.innerText = 'CLOSE ✕';
+                        btn.classList.add('active', 'glow-a', 'text-red-400');
+                        btn.classList.remove('text-cyan-400');
                     } else {
-                        btn.innerText = '▲ BROWSE LIBRARY ▲';
-                        btn.classList.remove('active', 'glow-a');
+                        btn.innerText = 'LIBRARY';
+                        btn.classList.remove('active', 'glow-a', 'text-red-400');
+                        btn.classList.add('text-cyan-400');
                     }
                 };
                 document.getElementById('btn-toggle-lib').addEventListener('click', toggleLib);
-                document.getElementById('btn-close-lib-mobile').addEventListener('click', () => { if(document.querySelector('.area-lib').classList.contains('open')) toggleLib(); });
 
                 document.getElementById('btn-power').addEventListener('click', (e) => {
                     powerMode = powerMode === 'MAX' ? 'ECO' : 'MAX';
                     e.target.innerText = powerMode === 'MAX' ? 'MAX POWER' : 'ECO MODE';
-                    e.target.className = powerMode === 'MAX' ? 'btn-hw px-3 h-7 text-[10px] text-red-500 active glow-b' : 'btn-hw px-3 h-7 text-[10px] text-green-500 shadow-[0_0_10px_#0f0]';
+                    e.target.className = powerMode === 'MAX' ? 'btn-hw px-2 md:px-3 h-7 text-[9px] md:text-[10px] text-red-500 active glow-b' : 'btn-hw px-2 md:px-3 h-7 text-[9px] md:text-[10px] text-green-500 shadow-[0_0_10px_#0f0]';
                     if (powerMode === 'ECO' && vis.ctxOsc) vis.ctxOsc.clearRect(0,0, vis.ctxOsc.canvas.width, vis.ctxOsc.canvas.height);
                 });
 
@@ -837,11 +833,13 @@
             
             loadTo(deckId, i) { 
                 sys[`deck${deckId}`].load(this.currentList[i]); 
-                // 优雅地自动隐藏曲库
+                
+                // 加载歌曲后自动优雅地下沉隐藏曲库
                 document.querySelector('.area-lib').classList.remove('open');
                 const btn = document.getElementById('btn-toggle-lib');
-                btn.innerText = '▲ BROWSE LIBRARY ▲';
-                btn.classList.remove('active', 'glow-a');
+                btn.innerText = 'LIBRARY';
+                btn.classList.remove('active', 'glow-a', 'text-red-400');
+                btn.classList.add('text-cyan-400');
             },
             
             setupDragDrop() {
@@ -874,7 +872,8 @@
         };
 
         setInterval(() => {
-            document.getElementById('sys-cpu').innerText = (powerMode === 'ECO' ? Math.random()*5 + 2 : Math.random()*15 + 10).toFixed(1) + '%';
+            const cpu = document.getElementById('sys-cpu');
+            if(cpu) cpu.innerText = (powerMode === 'ECO' ? Math.random()*5 + 2 : Math.random()*15 + 10).toFixed(1) + '%';
         }, 2000);
     </script>
 </body>
