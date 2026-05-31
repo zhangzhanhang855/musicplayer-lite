@@ -3,890 +3,821 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>JRmusic | Dual Engine</title>
+    <title>Void Engine Pro Mk-VIII | iPad Optimized</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-        
+    <link href="https://gs.jurieo.com/gemini/fonts-googleapis/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
     <style>
         :root { 
-            --neon-a: #00f2ff;
-            --neon-b: #ff00ea;
-            --bg-dark: #050505;
+            --neon-a: #00f2ff; --neon-a-dim: rgba(0, 242, 255, 0.3);
+            --neon-b: #ff0055; --neon-b-dim: rgba(255, 0, 85, 0.3);
+            --neon-mix: #ffaa00; 
+            --bg-dark: #070709; --panel-bg: #111114; --panel-border: #222228;
+            --metal-grad: linear-gradient(135deg, #2a2a30 0%, #151518 100%);
+            --lcd-bg: #030508;
         }
         
+        * { box-sizing: border-box; user-select: none; -webkit-user-drag: none; }
         body { 
-            background: var(--bg-dark); color: #fff; font-family: 'Inter', sans-serif; 
-            min-height: 100vh; overflow-x: hidden; user-select: none; margin: 0;
+            background: var(--bg-dark); color: #e0e0e0; font-family: 'Inter', sans-serif; 
+            margin: 0; padding: 0; 
+            height: 100dvh; /* 适配 iOS Safari 视口 */
+            width: 100vw;
+            overflow: hidden; 
             display: flex; flex-direction: column;
         }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* --- 满血模式布局 (Full Mode) --- */
-        #full-mode-app {
-            width: 100vw; max-width: 1800px; margin: 0 auto;
-            display: grid; grid-template-columns: 1fr 320px 1fr; grid-template-rows: auto 300px;
-            gap: 15px; padding: 15px; padding-top: 50px; box-sizing: border-box;
-            height: 100vh;
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        /* =========================================
+           iPad 横屏为主的经典 DJ 布局 (Grid)
+           ========================================= */
+        #app-container {
+            flex: 1; display: grid; 
+            grid-template-columns: 1fr 260px 1fr; /* 左右 Deck，中间 Mixer */
+            grid-template-rows: 50px 1fr 240px;   /* 顶栏，打碟区，底部曲库 */
+            grid-template-areas: 
+                "header header header"
+                "deck-a mixer deck-b"
+                "lib lib lib";
+            gap: 2px; background: #000; padding: 2px;
+            opacity: 0; transition: opacity 1s;
         }
-        @media (max-width: 1200px) {
-            #full-mode-app { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; height: auto; }
-            #full-mode-app .mixer-section { grid-column: 1 / -1; grid-row: 2; flex-direction: row !important; flex-wrap: wrap; justify-content: center; }
-            #full-mode-app .crate-section { grid-column: 1 / -1; grid-row: 3; }
+
+        .area-header { grid-area: header; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); }
+        .area-deck-a { grid-area: deck-a; background: var(--panel-bg); display: flex; flex-direction: column; border-top: 3px solid var(--neon-a); }
+        .area-deck-b { grid-area: deck-b; background: var(--panel-bg); display: flex; flex-direction: column; border-top: 3px solid var(--neon-b); }
+        .area-mixer { grid-area: mixer; background: #0a0a0c; border-left: 1px solid #000; border-right: 1px solid #000; display: flex; flex-direction: column; border-top: 3px solid var(--neon-mix); }
+        .area-lib { grid-area: lib; background: var(--panel-bg); border-top: 1px solid var(--panel-border); display: flex; } /* 改为横向 Flex 拆分侧边栏和列表 */
+
+        /* =========================================
+           LCD 与 控件 UI
+           ========================================= */
+        .lcd-screen {
+            background: var(--lcd-bg); border: 2px solid #000; border-radius: 4px;
+            position: relative; overflow: hidden; font-family: 'Share Tech Mono', monospace;
+            box-shadow: inset 0 0 20px rgba(0,0,0,1), 0 1px 0 rgba(255,255,255,0.1);
         }
-        @media (max-width: 768px) {
-            #full-mode-app { grid-template-columns: 1fr; }
-            #full-mode-app .deck-section { min-height: 500px; }
+        .lcd-screen::after { 
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
         }
+        .lcd-glow-a { box-shadow: inset 0 0 40px var(--neon-a-dim); border-color: #1a3333; }
+        .lcd-glow-b { box-shadow: inset 0 0 40px var(--neon-b-dim); border-color: #331a22; }
+
+        .hardware-panel { background: var(--metal-grad); box-shadow: inset 0 1px 1px rgba(255,255,255,0.05); }
         
-        .module { background: #0d0d0d; border: 1px solid #222; border-radius: 8px; display: flex; flex-direction: column; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05); }
-        .deck-a-border { border-top: 3px solid var(--neon-a); }
-        .deck-b-border { border-top: 3px solid var(--neon-b); }
-        .mixer-border { border-top: 3px solid #f59e0b; }
-        .knob-group { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 60px; margin-bottom: 10px; }
-        .knob-container-fm { display: flex; flex-direction: column; align-items: center; cursor: ns-resize; touch-action: none; position: relative; }
-        .knob-physical-fm { width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #4a4a4a, #111); border: 3px solid #000; position: relative; transform: rotate(0deg); box-shadow: 0 5px 10px rgba(0,0,0,0.5); }
-        .knob-physical-fm.small { width: 40px; height: 40px; }
-        .knob-physical-fm::after { content: ''; position: absolute; top: 5px; left: 50%; width: 4px; height: 12px; background: #fff; transform: translateX(-50%); border-radius: 2px; box-shadow: 0 0 5px rgba(255,255,255,0.5); }
-        .knob-eq-high::after { background: #e2e8f0; } .knob-eq-mid::after { background: #94a3b8; } .knob-eq-low::after { background: #475569; }
-        .knob-filter-a::after { background: var(--neon-a); box-shadow: 0 0 8px var(--neon-a); }
-        .knob-filter-b::after { background: var(--neon-b); box-shadow: 0 0 8px var(--neon-b); }
-        .fader-track-fm { width: 12px; height: 180px; background: #000; border-radius: 6px; position: relative; border: 1px solid #222; cursor: ns-resize; touch-action: none; box-shadow: inset 0 2px 10px rgba(0,0,0,1); margin: 20px 0; }
-        .fader-track-fm.pitch { height: 200px; }
-        .fader-track-fm.crossfader { width: 200px; height: 14px; cursor: ew-resize; margin: 10px 20px; }
-        .fader-handle-fm { width: 40px; height: 50px; background: linear-gradient(180deg, #444 0%, #1a1a1a 100%); border-radius: 4px; position: absolute; left: -15px; bottom: 50%; border: 1px solid #000; border-top: 1px solid #666; box-shadow: 0 10px 15px rgba(0,0,0,0.8); pointer-events: none; display: flex; align-items: center; justify-content: center; }
-        .fader-track-fm.crossfader .fader-handle-fm { width: 50px; height: 36px; bottom: -12px; left: 50%; transform: translateX(-50%); }
-        .fader-handle-fm::after { content: ''; width: 80%; height: 3px; background: #fff; opacity: 0.8; }
-        .fader-handle-a::after { background: var(--neon-a); box-shadow: 0 0 5px var(--neon-a); }
-        .fader-handle-b::after { background: var(--neon-b); box-shadow: 0 0 5px var(--neon-b); }
-        .pad-grid-fm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; }
-        .pad-fm { height: 45px; background: #1a1a1a; border-radius: 4px; border-bottom: 4px solid #050505; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 10px; font-weight: 900; color: #555; transition: all 0.05s; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1); }
-        .pad-fm:active, .pad-fm.active { transform: translateY(3px); border-bottom: 1px solid #000; }
-        .pad-a:active, .pad-a.active { background: var(--neon-a); color: #000; box-shadow: 0 0 20px var(--neon-a); }
-        .pad-b:active, .pad-b.active { background: var(--neon-b); color: #000; box-shadow: 0 0 20px var(--neon-b); }
-        .hardware-btn-fm { background: linear-gradient(180deg, #2a2a2a 0%, #151515 100%); border: 1px solid #333; border-radius: 6px; color: #aaa; font-family: 'Share Tech Mono', monospace; font-size: 12px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.5); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .hardware-btn-fm:active, .hardware-btn-fm.active { background: #111; transform: translateY(2px); box-shadow: 0 1px 2px rgba(0,0,0,0.8); border-color: #555; }
-        .btn-play-a.active { border-color: var(--neon-a); color: var(--neon-a); box-shadow: inset 0 0 10px var(--neon-a); }
-        .btn-play-b.active { border-color: var(--neon-b); color: var(--neon-b); box-shadow: inset 0 0 10px var(--neon-b); }
-        .vinyl-wrap-fm { width: 260px; height: 260px; border-radius: 50%; background: #050505; display: flex; align-items: center; justify-content: center; cursor: grab; position: relative; touch-action: none; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
-        .vinyl-wrap-fm:active { cursor: grabbing; }
-        .vinyl-disk-fm { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, #252525 0%, #0a0a0a 60%, #000 100%); border: 8px solid #333; position: absolute; pointer-events: none; box-shadow: inset 0 0 15px #000; }
-        .vinyl-disk-fm::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0, transparent 2px, rgba(255,255,255,0.03) 3px); }
-        .jog-marker-fm { position: absolute; top: 0; left: 50%; width: 4px; height: 20px; background: #fff; transform: translateX(-50%); border-radius: 2px; box-shadow: 0 0 10px #fff; z-index: 20; transition: transform 0.1s linear; }
-        .art-center-fm { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border-radius: 50%; border: 4px solid #222; background: #111; z-index: 10; overflow: hidden; pointer-events: none; }
-        .cover-img-fm { width: 100%; height: 100%; background-size: cover; background-position: center; }
-        .lcd-display { background: #020605; border-radius: 6px; padding: 12px; font-family: 'Share Tech Mono', monospace; border: 2px solid #222; position: relative; overflow: hidden; box-shadow: inset 0 0 30px rgba(0,255,255,0.05); }
-        .lcd-a { border-color: rgba(0, 242, 255, 0.3); } .lcd-b { border-color: rgba(255, 0, 234, 0.3); }
-        .waveform-canvas { width: 100%; height: 40px; margin-top: 10px; background: #000; border-radius: 4px; }
-        .vu-meter { width: 10px; height: 150px; background: #000; border-radius: 3px; position: relative; overflow: hidden; }
-        .vu-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; transition: height 0.05s; }
-        .vu-fill-master { background: linear-gradient(to top, #0f0, #ff0, #f00); }
-        .playlist-col-fm { width: 250px; border-right: 1px solid #222; overflow-y: auto; }
-        .tracks-col-fm { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .track-row-fm { display: grid; grid-template-columns: 30px 3fr 1.5fr 60px 80px; padding: 8px 15px; border-bottom: 1px solid #1a1a1a; cursor: pointer; font-size: 12px; align-items: center; transition: background 0.1s; }
-        .track-row-fm:hover { background: #1a1a1a; }
+        .knob-wrapper { display: flex; flex-direction: column; align-items: center; position: relative; margin: 4px 0; touch-action: none; }
+        .knob-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700; color: #778; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 1px; }
+        .knob-base { border-radius: 50%; background: #050505; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
+        .knob-physical { border-radius: 50%; position: absolute; background: conic-gradient(from 180deg at 50% 50%, #333 0deg, #555 45deg, #222 90deg, #444 135deg, #111 180deg, #444 225deg, #222 270deg, #555 315deg, #333 360deg); border: 2px solid #111; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+        .knob-indicator { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: 3px; height: 30%; background: #fff; border-radius: 2px; box-shadow: 0 0 4px #fff; }
         
-        #boot-overlay { position: fixed; inset: 0; z-index: 1000; background: #050505; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .drop-overlay { position: absolute; inset: 0; background: rgba(0, 242, 255, 0.1); border: 4px dashed var(--neon-a); z-index: 50; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .drop-active .drop-overlay { display: flex; }
-        .top-bar { position: fixed; top: 0; left: 0; right: 0; height: 40px; background: #0a0a0a; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; z-index: 100; }
+        .knob-eq .knob-base { width: 50px; height: 50px; } .knob-eq .knob-physical { width: 40px; height: 40px; }
+        .knob-filter .knob-base { width: 58px; height: 58px; } .knob-filter .knob-physical { width: 46px; height: 46px; }
+        .knob-trim .knob-base { width: 40px; height: 40px; } .knob-trim .knob-physical { width: 30px; height: 30px; }
+        .knob-indicator.ind-a { background: var(--neon-a); box-shadow: 0 0 6px var(--neon-a); }
+        .knob-indicator.ind-b { background: var(--neon-b); box-shadow: 0 0 6px var(--neon-b); }
+        .knob-indicator.ind-mix { background: var(--neon-mix); box-shadow: 0 0 6px var(--neon-mix); }
+
+        .fader-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; touch-action: none; }
+        .fader-track { width: 10px; background: #000; border-radius: 5px; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,1), 0 1px 0 rgba(255,255,255,0.1); border: 1px solid #1a1a1a; }
+        .fader-track::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #222; }
+        .fader-track.vol { height: 180px; margin: 15px 0; }
+        .fader-track.pitch { height: 200px; margin: 15px 0; }
+        .fader-track.cross { width: 200px; height: 12px; margin: 15px 0; }
+        .fader-track.cross::before { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
         
-        /* --- 省电模式布局 (Simple Mode) --- */
-        #simple-mode-app {
-            width: 100vw; height: 100vh; padding-top: 40px; box-sizing: border-box;
-            display: none; align-items: center; justify-content: center;
+        .fader-handle { width: 36px; height: 46px; background: linear-gradient(to bottom, #444, #1a1a1a); position: absolute; left: 50%; transform: translateX(-50%); bottom: 50%; border-radius: 4px; border: 1px solid #000; border-top: 1px solid #666; box-shadow: 0 10px 20px rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; pointer-events: none; }
+        .fader-track.cross .fader-handle { width: 44px; height: 32px; left: 50%; bottom: auto; top: 50%; transform: translate(-50%, -50%); }
+        .fader-handle::after { content: ''; width: 70%; height: 3px; background: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        .fader-handle.handle-a::after { background: var(--neon-a); box-shadow: 0 0 8px var(--neon-a); }
+        .fader-handle.handle-b::after { background: var(--neon-b); box-shadow: 0 0 8px var(--neon-b); }
+
+        .btn-hw { background: linear-gradient(180deg, #2a2a30 0%, #151518 100%); border: 1px solid #000; border-top: 1px solid #445; border-radius: 4px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; box-shadow: 0 4px 8px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; transition: 0.1s; touch-action: manipulation; }
+        .btn-hw:active, .btn-hw.active { background: #111; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); transform: translateY(2px); }
+        .btn-hw.active.glow-a { color: var(--neon-a); text-shadow: 0 0 10px var(--neon-a); border-color: var(--neon-a-dim); box-shadow: inset 0 0 15px var(--neon-a-dim); }
+        .btn-hw.active.glow-b { color: var(--neon-b); text-shadow: 0 0 10px var(--neon-b); border-color: var(--neon-b-dim); box-shadow: inset 0 0 15px var(--neon-b-dim); }
+
+        .pad-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 8px; padding: 10px; background: #0a0a0c; border-radius: 8px; box-shadow: inset 0 0 20px #000; }
+        .pad-hw { background: #1a1a20; height: 44px; border-radius: 4px; border: 1px solid #000; border-bottom: 4px solid #050505; display: flex; align-items: center; justify-content: center; color: #555; font-family: 'Share Tech Mono', monospace; font-size: 11px; font-weight: bold; transition: 0.05s; position: relative; touch-action: none; }
+        .pad-hw::before { content: ''; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 80%; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
+        .pad-hw:active, .pad-hw.active { transform: translateY(4px); border-bottom: 0 solid #000; height: 40px; margin-top: 4px; }
+        .pad-hw.active.pad-a { background: #004444; color: #fff; box-shadow: 0 0 20px var(--neon-a); }
+        .pad-hw.active.pad-a::before { background: var(--neon-a); box-shadow: 0 0 10px var(--neon-a); }
+        .pad-hw.active.pad-b { background: #440022; color: #fff; box-shadow: 0 0 20px var(--neon-b); }
+        .pad-hw.active.pad-b::before { background: var(--neon-b); box-shadow: 0 0 10px var(--neon-b); }
+
+        /* 打碟转盘 */
+        .jog-container { position: relative; flex: 1; min-height: 180px; display: flex; align-items: center; justify-content: center; }
+        .jog-wheel { width: min(240px, 90%); aspect-ratio: 1/1; border-radius: 50%; background: #050505; box-shadow: 0 15px 30px rgba(0,0,0,0.9), inset 0 2px 5px rgba(255,255,255,0.1); position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; }
+        .jog-ring-outer { position: absolute; inset: 0; border-radius: 50%; border: 12px solid #1a1a1a; background: conic-gradient(#111, #222, #111, #222, #111); box-shadow: inset 0 0 15px #000; pointer-events: none; }
+        .jog-platter { width: 86%; height: 86%; border-radius: 50%; background: radial-gradient(circle, #252525 0%, #0a0a0a 60%, #000 100%); border: 3px solid #333; position: relative; box-shadow: inset 0 0 20px #000; }
+        .jog-platter::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0, transparent 3px, rgba(255,255,255,0.03) 4px); }
+        .jog-marker { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 4px; height: 25px; background: #fff; border-radius: 2px; box-shadow: 0 0 10px #fff; z-index: 10; transform-origin: bottom center; }
+        .jog-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; border-radius: 50%; background: var(--lcd-bg); border: 3px solid #000; box-shadow: inset 0 0 20px rgba(0,0,0,1), 0 0 0 2px #333; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; overflow: hidden; font-family: 'Share Tech Mono', monospace; }
+        .jog-cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; filter: grayscale(50%); mix-blend-mode: luminosity; }
+        
+        .vu-meter-vert { width: 10px; height: 100%; background: #000; border-radius: 2px; overflow: hidden; position: relative; border: 1px solid #222; }
+        .vu-leds { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column-reverse; gap: 1px; padding: 1px; }
+        .vu-led { flex: 1; background: #111; border-radius: 1px; }
+        
+        #boot-screen { position: fixed; inset: 0; background: #050505; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Share Tech Mono', monospace; color: #0f0; }
+        
+        /* 手机竖屏降级回落布局 */
+        @media (max-width: 767px) {
+            #app-container {
+                display: flex; flex-direction: column; height: auto; min-height: 100dvh; overflow-y: auto; overflow-x: hidden;
+            }
+            .area-deck-a, .area-deck-b, .area-mixer, .area-lib { border-radius: 8px; margin-bottom: 10px; }
+            .area-lib { flex-direction: column; height: 400px; }
+            .area-lib > div:first-child { width: 100%; height: 120px; border-right: none; border-bottom: 1px solid var(--panel-border); }
         }
     </style>
 </head>
 <body>
 
-    <!-- 顶部状态栏 -->
-    <div class="top-bar">
-        <div class="text-[10px] text-gray-500 font-mono tracking-widest hidden sm:block">VOID DJ SYSTEM | MK-VII + MK-VI</div>
-        <div class="flex gap-2">
-            <!-- 默认启动为省电模式，点击切换满血模式 -->
-            <button id="mode-toggle" onclick="togglePerformanceMode()" class="hardware-btn-fm px-4 py-1 text-[10px] border-green-500 text-green-400">🔋 节能/后台模式</button>
-            <button onclick="toggleFullScreen()" class="hardware-btn-fm px-4 py-1 text-[10px]">🔲 全屏</button>
-        </div>
-    </div>
-    
-    <!-- 启动层 -->
-    <div id="boot-overlay">
-        <div class="text-[12px] tracking-[1.5em] text-gray-500 mb-12 font-black text-center">VOID ENGINE<br><span class="text-xs tracking-normal">DUAL SYSTEM</span></div>
-        <button onclick="bootSystem()" class="px-12 py-5 border-2 border-cyan-500 text-cyan-500 font-black hover:bg-cyan-500 hover:text-black transition-all duration-300 shadow-[0_0_30px_rgba(0,242,255,0.3)]">
-            ENGAGE SYSTEM
-        </button>
-        <div class="mt-8 text-[10px] text-gray-600 font-mono text-center">
-            默认以省电极简模式启动以支持锁屏不断流<br>可随时在左上角无缝热切满血双轨打碟机
-        </div>
-    </div>
-    
-    <!-- ========================================== -->
-    <!-- 1. FULL MODE UI (双轨满血引擎) -->
-    <!-- ========================================== -->
-    <div id="full-mode-app" class="system-container" style="display: none; opacity: 0; transition: opacity 0.5s;">
-        <!-- DECK A -->
-        <section class="module deck-section deck-a-border p-4" id="deck-a-ui">
-            <div class="lcd-display lcd-a mb-4">
-                <div class="flex justify-between text-[10px] text-cyan-500 mb-1">
-                    <span>DECK A | <span class="deck-mode font-bold">READY</span></span>
-                    <span class="keylock-status text-gray-600">KEYLOCK OFF</span>
-                </div>
-                <div class="deck-title text-xl font-bold text-white truncate mb-2 shadow-text">NO TRACK LOADED</div>
-                <div class="flex justify-between items-end">
-                    <div class="deck-time text-3xl font-black text-cyan-400">00:00:00</div>
-                    <div class="text-right">
-                        <div class="text-[10px] text-gray-400">BPM</div>
-                        <div class="deck-bpm text-xl font-bold text-cyan-200">0.00</div>
-                    </div>
-                </div>
-                <canvas class="waveform-canvas deck-canvas"></canvas>
-            </div>
-            
-            <div class="flex justify-between mt-2 flex-1">
-                <div class="flex-1 flex items-center justify-center relative">
-                    <div class="vinyl-wrap-fm jog-wheel" data-deck="A"><div class="vinyl-disk-fm jog-disk"><div class="jog-marker-fm"></div></div><div class="art-center-fm"><div class="cover-img-fm bg-gray-900"></div></div></div>
-                </div>
-                <div class="flex flex-col items-center ml-4">
-                    <div class="text-[9px] text-gray-500 font-bold">TEMPO</div>
-                    <div class="fader-track-fm pitch" data-deck="A" data-type="pitch"><div class="fader-handle-fm fader-handle-a" style="bottom: 50%;"></div></div>
-                    <button class="hardware-btn-fm w-8 h-8 mt-2 text-[16px] btn-pitch-reset" data-deck="A">0</button>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <div class="flex gap-2 mb-4">
-                    <button class="hardware-btn-fm btn-play-a w-16 h-14 text-[24px] btn-play" data-deck="A">▶</button>
-                    <button class="hardware-btn-fm w-14 h-14 text-cyan-500 font-bold btn-cue" data-deck="A">CUE</button>
-                    <div class="flex-1 flex gap-2 justify-end">
-                        <button class="hardware-btn-fm w-12 h-14 btn-pitch-bend text-[18px]" data-deck="A" data-dir="-">-</button>
-                        <button class="hardware-btn-fm w-12 h-14 btn-pitch-bend text-[18px]" data-deck="A" data-dir="+">+</button>
-                    </div>
-                </div>
-                <div class="text-[9px] text-gray-500 font-bold mb-1">HOT CUES & LOOP</div>
-                <div class="pad-grid-fm">
-                    <div class="pad-fm pad-a btn-hotcue" data-deck="A" data-idx="0">1</div><div class="pad-fm pad-a btn-hotcue" data-deck="A" data-idx="1">2</div>
-                    <div class="pad-fm pad-a btn-hotcue" data-deck="A" data-idx="2">3</div><div class="pad-fm pad-a btn-hotcue" data-deck="A" data-idx="3">4</div>
-                    <div class="pad-fm pad-a text-cyan-600 btn-loop" data-deck="A" data-beats="4">4 BEAT</div><div class="pad-fm pad-a text-cyan-600 btn-loop" data-deck="A" data-beats="8">8 BEAT</div>
-                    <div class="pad-fm pad-a text-orange-500 btn-loop-in" data-deck="A">IN</div><div class="pad-fm pad-a text-orange-500 btn-loop-out" data-deck="A">OUT</div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- MIXER -->
-        <section class="module mixer-section mixer-border p-4 flex flex-col">
-            <div class="flex justify-between w-full flex-1">
-                <div class="flex flex-col items-center w-1/3 border-r border-gray-800">
-                    <div class="text-[10px] text-gray-500 font-bold mb-4">CH A</div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="A" data-param="gain"><div class="knob-physical-fm small"></div></div></div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="A" data-param="high"><div class="knob-physical-fm knob-eq-high"></div></div></div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="A" data-param="mid"><div class="knob-physical-fm knob-eq-mid"></div></div></div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="A" data-param="low"><div class="knob-physical-fm knob-eq-low"></div></div></div>
-                    <div class="knob-group mt-2"><div class="knob-container-fm" data-deck="A" data-param="filter"><div class="knob-physical-fm knob-filter-a"></div></div></div>
-                    <div class="fader-track-fm mt-4" data-deck="A" data-type="volume"><div class="fader-handle-fm fader-handle-a" style="bottom: 80%;"></div></div>
-                </div>
-                
-                <div class="flex flex-col items-center w-1/3 px-2">
-                    <div class="text-[10px] text-gray-500 font-bold mb-4 text-center">MASTER</div>
-                    <div class="knob-group mb-4"><div class="knob-container-fm" data-deck="M" data-param="master"><div class="knob-physical-fm"></div></div></div>
-                    <div class="flex gap-2 bg-black p-2 rounded border border-gray-800 h-[150px] mb-4">
-                        <div class="vu-meter"><div class="vu-fill vu-fill-master" id="vu-l"></div></div><div class="vu-meter"><div class="vu-fill vu-fill-master" id="vu-r"></div></div>
-                    </div>
-                </div>
-                
-                <div class="flex flex-col items-center w-1/3 border-l border-gray-800">
-                    <div class="text-[10px] text-gray-500 font-bold mb-4">CH B</div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="B" data-param="gain"><div class="knob-physical-fm small"></div></div></div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="B" data-param="high"><div class="knob-physical-fm knob-eq-high"></div></div></div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="B" data-param="mid"><div class="knob-physical-fm knob-eq-mid"></div></div></div>
-                    <div class="knob-group"><div class="knob-container-fm" data-deck="B" data-param="low"><div class="knob-physical-fm knob-eq-low"></div></div></div>
-                    <div class="knob-group mt-2"><div class="knob-container-fm" data-deck="B" data-param="filter"><div class="knob-physical-fm knob-filter-b"></div></div></div>
-                    <div class="fader-track-fm mt-4" data-deck="B" data-type="volume"><div class="fader-handle-fm fader-handle-b" style="bottom: 80%;"></div></div>
-                </div>
-            </div>
-            <div class="w-full flex justify-center border-t border-gray-800 pt-4 mt-2">
-                <div class="fader-track-fm crossfader" data-type="crossfader"><div class="fader-handle-fm" style="left: 50%;"></div></div>
-            </div>
-        </section>
-        
-        <!-- DECK B -->
-        <section class="module deck-section deck-b-border p-4" id="deck-b-ui">
-            <div class="lcd-display lcd-b mb-4">
-                <div class="flex justify-between text-[10px] text-pink-500 mb-1">
-                    <span>DECK B | <span class="deck-mode font-bold">READY</span></span>
-                </div>
-                <div class="deck-title text-xl font-bold text-white truncate mb-2">NO TRACK LOADED</div>
-                <div class="flex justify-between items-end">
-                    <div class="deck-time text-3xl font-black text-pink-400">00:00:00</div>
-                    <div class="text-right"><div class="deck-bpm text-xl font-bold text-pink-200">0.00</div></div>
-                </div>
-                <canvas class="waveform-canvas deck-canvas"></canvas>
-            </div>
-            
-            <div class="flex justify-between mt-2 flex-1">
-                <div class="flex flex-col items-center mr-4">
-                    <div class="text-[9px] text-gray-500 font-bold">TEMPO</div>
-                    <div class="fader-track-fm pitch" data-deck="B" data-type="pitch"><div class="fader-handle-fm fader-handle-b" style="bottom: 50%;"></div></div>
-                    <button class="hardware-btn-fm w-8 h-8 mt-2 text-[16px] btn-pitch-reset" data-deck="B">0</button>
-                </div>
-                <div class="flex-1 flex items-center justify-center relative">
-                    <div class="vinyl-wrap-fm jog-wheel" data-deck="B"><div class="vinyl-disk-fm jog-disk"><div class="jog-marker-fm"></div></div><div class="art-center-fm"><div class="cover-img-fm bg-gray-900"></div></div></div>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <div class="flex gap-2 mb-4">
-                    <div class="flex-1 flex gap-2">
-                        <button class="hardware-btn-fm w-12 h-14 btn-pitch-bend text-[18px]" data-deck="B" data-dir="-">-</button>
-                        <button class="hardware-btn-fm w-12 h-14 btn-pitch-bend text-[18px]" data-deck="B" data-dir="+">+</button>
-                    </div>
-                    <button class="hardware-btn-fm w-14 h-14 text-pink-500 font-bold btn-cue" data-deck="B">CUE</button>
-                    <button class="hardware-btn-fm btn-play-b w-16 h-14 text-[24px] btn-play" data-deck="B">▶</button>
-                </div>
-                <div class="pad-grid-fm">
-                    <div class="pad-fm pad-b text-orange-500 btn-loop-in" data-deck="B">IN</div><div class="pad-fm pad-b text-orange-500 btn-loop-out" data-deck="B">OUT</div>
-                    <div class="pad-fm pad-b text-pink-600 btn-loop" data-deck="B" data-beats="4">4B</div><div class="pad-fm pad-b text-pink-600 btn-loop" data-deck="B" data-beats="8">8B</div>
-                    <div class="pad-fm pad-b btn-hotcue" data-deck="B" data-idx="0">1</div><div class="pad-fm pad-b btn-hotcue" data-deck="B" data-idx="1">2</div>
-                    <div class="pad-fm pad-b btn-hotcue" data-deck="B" data-idx="2">3</div><div class="pad-fm pad-b btn-hotcue" data-deck="B" data-idx="3">4</div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- LIBRARY CRATE (Full Mode) -->
-        <section class="module crate-section" id="library-area-fm">
-            <div class="drop-overlay text-2xl font-black text-cyan-400 tracking-widest">DROP AUDIO FILES HERE</div>
-            <div class="playlist-col-fm bg-[#080808] p-4 flex flex-col">
-                <div class="text-[10px] text-gray-500 font-bold mb-2 flex justify-between items-center">
-                    <span>COLLECTIONS</span><span id="sync-status" class="text-cyan-500 text-[8px] animate-pulse"></span>
-                </div>
-                <div id="playlist-nav-fm" class="flex flex-col mb-4 overflow-y-auto no-scrollbar"></div>
-            </div>
-            <div class="tracks-col-fm bg-[#050505]">
-                <div class="flex justify-between items-center p-3 border-b border-gray-800 bg-[#0a0a0a] sticky top-0 z-10">
-                    <input type="text" id="search-box-fm" class="bg-black border border-gray-700 text-white px-3 py-1 text-[12px] rounded w-64 outline-none focus:border-cyan-500" placeholder="Search track...">
-                </div>
-                
-                <!-- 【修复重点】：补回满血模式丢失的表头，解决 CSS Grid 缺少对齐列导致的塌陷问题 -->
-                <div class="text-[10px] text-gray-500 grid grid-cols-[30px_3fr_1.5fr_60px_80px] gap-2 px-4 py-2 border-b border-gray-800 sticky top-[45px] bg-[#050505] z-10">
-                    <div>#</div><div>TITLE</div><div>ARTIST</div><div>BPM</div><div class="text-center">LOAD</div>
-                </div>
-                
-                <div id="track-list-container-fm" class="flex-1"></div>
-            </div>
-        </section>
+    <div id="boot-screen">
+        <div class="text-4xl font-bold mb-8 text-white tracking-[0.5em] drop-shadow-[0_0_20px_#fff]">VOID ENGINE <span class="text-xl text-red-500">PRO iPad</span></div>
+        <div class="w-[600px] max-w-[90vw] h-48 overflow-hidden font-mono text-sm drop-shadow-[0_0_5px_#0f0]" id="term-output"></div>
+        <button id="btn-engage" class="mt-8 px-10 py-3 border-2 border-[#0f0] text-[#0f0] font-bold text-lg hover:bg-[#0f0] hover:text-black transition-all hidden shadow-[0_0_20px_#0f0]">ENGAGE SYSTEM</button>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 2. SIMPLE MODE UI (单轨省电引擎) -->
-    <!-- ========================================== -->
-    <div id="simple-mode-app">
-        <div id="win-content-main" style="width: 100%; height: 100%; max-width: 1100px; max-height: 800px; padding: 15px;"></div>
-    </div>
-    
-    <!-- 音频引擎载体 -->
-    <audio id="audio-A" crossorigin="anonymous" playsinline webkit-playsinline></audio>
-    <audio id="audio-B" crossorigin="anonymous" playsinline webkit-playsinline></audio>
-    
-    <script>
-        // ==========================================
-        // 全局模式与聚合中心 (Global Manager & Data Fetcher)
-        // ==========================================
-        let appMode = 'simple'; 
+    <div id="app-container">
         
-        function togglePerformanceMode() {
-            const btn = document.getElementById('mode-toggle');
-            const fmApp = document.getElementById('full-mode-app');
-            const smApp = document.getElementById('simple-mode-app');
+        <header class="area-header flex items-center px-4 justify-between hardware-panel">
+            <div class="flex items-center gap-4">
+                <div class="text-xl font-black italic tracking-widest text-white">VOID<span class="text-gray-500 font-normal">PRO</span></div>
+                <div class="lcd-screen w-36 h-7 flex items-center justify-between px-2 text-[10px] text-cyan-400">
+                    <span>CPU</span><span id="sys-cpu">12%</span>
+                    <span>MEM</span><span id="sys-mem">140M</span>
+                </div>
+            </div>
+            <div class="flex-1 mx-6 h-8 bg-black border border-gray-800 rounded relative overflow-hidden hidden md:block" id="osc-container">
+                <canvas id="canvas-master-osc" class="absolute inset-0 w-full h-full"></canvas>
+            </div>
+            <div class="flex gap-3">
+                <button class="btn-hw px-3 h-7 text-[10px] text-red-500 active glow-b" id="btn-power">MAX POWER</button>
+                <div class="lcd-screen px-3 h-7 flex items-center text-orange-400 text-xs font-bold" id="master-clock">00:00</div>
+            </div>
+        </header>
+
+        <main class="area-deck-a relative">
+            <div class="h-28 p-3 border-b border-gray-800 flex flex-col gap-2">
+                <div class="lcd-screen lcd-glow-a flex-1 p-2 flex flex-col relative">
+                    <div class="flex justify-between items-start z-10 relative">
+                        <div class="w-2/3">
+                            <div class="text-lg font-bold text-white truncate text-glow-a" id="da-title">NO TRACK</div>
+                            <div class="text-[10px] text-cyan-200 mt-0.5 truncate" id="da-artist">--</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[9px] text-cyan-600">REMAINING</div>
+                            <div class="text-xl font-black text-cyan-400" id="da-time">-00:00.00</div>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-1 left-2 flex gap-3 z-10">
+                        <div><span class="text-[8px] text-gray-500 block leading-tight">BPM</span><span class="text-sm font-bold text-white" id="da-bpm">0.00</span></div>
+                        <div><span class="text-[8px] text-gray-500 block leading-tight">PITCH</span><span class="text-sm font-bold text-white" id="da-pitch-val">+0.00%</span></div>
+                    </div>
+                    <canvas id="canvas-wave-a" class="absolute inset-0 w-full h-full opacity-60"></canvas>
+                </div>
+            </div>
+
+            <div class="flex-1 flex px-3 items-center justify-between">
+                <div class="flex flex-col gap-3 w-16">
+                    <button class="btn-hw h-12 rounded-full text-lg" id="da-btn-play" data-deck="A">▶</button>
+                    <button class="btn-hw h-12 rounded-full text-lg text-cyan-500" id="da-btn-cue" data-deck="A">C</button>
+                    <button class="btn-hw h-8 text-[10px] mt-2" id="da-btn-sync" data-deck="A">SYNC</button>
+                </div>
+                
+                <div class="jog-container">
+                    <div class="jog-wheel" id="da-jog" data-deck="A">
+                        <div class="jog-ring-outer"></div>
+                        <div class="jog-platter"><div class="jog-marker" id="da-jog-marker"></div></div>
+                        <div class="jog-screen">
+                            <div class="jog-cover" id="da-cover"></div>
+                            <span class="text-[10px] text-cyan-500 z-10" id="da-jog-bpm">0.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-12 flex flex-col items-center">
+                    <div class="w-2 h-2 rounded-full bg-[#111] border border-gray-600 mb-1" id="da-pitch-zero"></div>
+                    <div class="fader-wrapper">
+                        <div class="fader-track pitch" id="da-pitch-track" data-deck="A"><div class="fader-handle handle-a" id="da-pitch-handle" style="bottom: 50%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 pt-0">
+                <div class="pad-grid">
+                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="0">C1</div>
+                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="1">C2</div>
+                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="2">C3</div>
+                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="3">C4</div>
+                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="1">1B</div>
+                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="2">2B</div>
+                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="4">4B</div>
+                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="8">8B</div>
+                </div>
+            </div>
+        </main>
+
+        <main class="area-mixer hardware-panel">
+            <div class="flex-1 flex">
+                <div class="flex-1 flex flex-col items-center pt-3 border-r border-gray-800">
+                    <div class="text-[10px] font-bold text-gray-500 mb-2">CH A</div>
+                    <div class="knob-wrapper knob-trim" data-deck="A" data-param="gain"><div class="knob-label">TRIM</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                    <div class="w-full h-px bg-gray-800 my-1"></div>
+                    <div class="knob-wrapper knob-eq" data-deck="A" data-param="high"><div class="knob-label">HI</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                    <div class="knob-wrapper knob-eq" data-deck="A" data-param="mid"><div class="knob-label">MID</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                    <div class="knob-wrapper knob-eq" data-deck="A" data-param="low"><div class="knob-label">LOW</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                    <div class="w-full h-px bg-gray-800 my-1"></div>
+                    <div class="knob-wrapper knob-filter" data-deck="A" data-param="filter"><div class="knob-label text-cyan-500">FILTER</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                    <div class="flex-1 flex items-end pb-2">
+                        <div class="fader-wrapper"><div class="fader-track vol" id="da-vol-track" data-deck="A"><div class="fader-handle handle-a" id="da-vol-handle" style="bottom: 80%;"></div></div></div>
+                    </div>
+                </div>
+
+                <div class="w-16 flex flex-col items-center pt-3 bg-[#050505]">
+                    <div class="text-[10px] font-bold text-gray-500 mb-2">MASTER</div>
+                    <div class="knob-wrapper knob-trim" data-deck="M" data-param="master"><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-mix"></div></div></div></div>
+                    <div class="flex gap-1 bg-black p-1 border border-gray-800 rounded mt-2 flex-1 max-h-[160px]">
+                        <div class="vu-meter-vert"><div class="vu-leds" id="vu-l"></div></div>
+                        <div class="vu-meter-vert"><div class="vu-leds" id="vu-r"></div></div>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col items-center pt-3 border-l border-gray-800">
+                    <div class="text-[10px] font-bold text-gray-500 mb-2">CH B</div>
+                    <div class="knob-wrapper knob-trim" data-deck="B" data-param="gain"><div class="knob-label">TRIM</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                    <div class="w-full h-px bg-gray-800 my-1"></div>
+                    <div class="knob-wrapper knob-eq" data-deck="B" data-param="high"><div class="knob-label">HI</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                    <div class="knob-wrapper knob-eq" data-deck="B" data-param="mid"><div class="knob-label">MID</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                    <div class="knob-wrapper knob-eq" data-deck="B" data-param="low"><div class="knob-label">LOW</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                    <div class="w-full h-px bg-gray-800 my-1"></div>
+                    <div class="knob-wrapper knob-filter" data-deck="B" data-param="filter"><div class="knob-label text-pink-500">FILTER</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                    <div class="flex-1 flex items-end pb-2">
+                        <div class="fader-wrapper"><div class="fader-track vol" id="db-vol-track" data-deck="B"><div class="fader-handle handle-b" id="db-vol-handle" style="bottom: 80%;"></div></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="h-16 border-t border-gray-800 flex items-center justify-center bg-[#070709] shadow-[inset_0_10px_20px_#000]">
+                <div class="text-[10px] text-gray-600 font-bold mr-3">A</div>
+                <div class="fader-wrapper"><div class="fader-track cross" id="cross-track"><div class="fader-handle" id="cross-handle" style="left: 50%;"></div></div></div>
+                <div class="text-[10px] text-gray-600 font-bold ml-3">B</div>
+            </div>
+        </main>
+
+        <main class="area-deck-b relative">
+            <div class="h-28 p-3 border-b border-gray-800 flex flex-col gap-2">
+                <div class="lcd-screen lcd-glow-b flex-1 p-2 flex flex-col relative">
+                    <div class="flex justify-between items-start z-10 relative">
+                        <div class="w-2/3">
+                            <div class="text-lg font-bold text-white truncate text-glow-b" id="db-title">NO TRACK</div>
+                            <div class="text-[10px] text-pink-200 mt-0.5 truncate" id="db-artist">--</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[9px] text-pink-600">REMAINING</div>
+                            <div class="text-xl font-black text-pink-400" id="db-time">-00:00.00</div>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-1 left-2 flex gap-3 z-10">
+                        <div><span class="text-[8px] text-gray-500 block leading-tight">BPM</span><span class="text-sm font-bold text-white" id="db-bpm">0.00</span></div>
+                        <div><span class="text-[8px] text-gray-500 block leading-tight">PITCH</span><span class="text-sm font-bold text-white" id="db-pitch-val">+0.00%</span></div>
+                    </div>
+                    <canvas id="canvas-wave-b" class="absolute inset-0 w-full h-full opacity-60"></canvas>
+                </div>
+            </div>
+
+            <div class="flex-1 flex px-3 items-center justify-between flex-row-reverse">
+                <div class="flex flex-col gap-3 w-16">
+                    <button class="btn-hw h-12 rounded-full text-lg" id="db-btn-play" data-deck="B">▶</button>
+                    <button class="btn-hw h-12 rounded-full text-lg text-pink-500" id="db-btn-cue" data-deck="B">C</button>
+                    <button class="btn-hw h-8 text-[10px] mt-2" id="db-btn-sync" data-deck="B">SYNC</button>
+                </div>
+                
+                <div class="jog-container">
+                    <div class="jog-wheel" id="db-jog" data-deck="B">
+                        <div class="jog-ring-outer"></div>
+                        <div class="jog-platter"><div class="jog-marker" id="db-jog-marker"></div></div>
+                        <div class="jog-screen">
+                            <div class="jog-cover" id="db-cover"></div>
+                            <span class="text-[10px] text-pink-500 z-10" id="db-jog-bpm">0.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-12 flex flex-col items-center">
+                    <div class="w-2 h-2 rounded-full bg-[#111] border border-gray-600 mb-1" id="db-pitch-zero"></div>
+                    <div class="fader-wrapper">
+                        <div class="fader-track pitch" id="db-pitch-track" data-deck="B"><div class="fader-handle handle-b" id="db-pitch-handle" style="bottom: 50%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 pt-0">
+                <div class="pad-grid">
+                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="0">C1</div>
+                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="1">C2</div>
+                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="2">C3</div>
+                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="3">C4</div>
+                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="1">1B</div>
+                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="2">2B</div>
+                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="4">4B</div>
+                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="8">8B</div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="area-lib">
+            <div class="w-48 border-r border-gray-800 flex flex-col bg-[#0a0a0c]">
+                <div class="h-8 border-b border-gray-800 flex items-center px-3">
+                    <span class="text-[10px] font-bold text-gray-400">PLAYLISTS</span>
+                </div>
+                <div class="flex-1 overflow-y-auto p-2" id="lib-tree">
+                    </div>
+            </div>
             
-            if (appMode === 'full') {
-                appMode = 'simple';
-                if(engine && engine.deckA) engine.deckA.pause();
-                if(engine && engine.deckB) engine.deckB.pause();
-                
-                fmApp.style.opacity = '0';
-                setTimeout(() => { fmApp.style.display = 'none'; smApp.style.display = 'flex'; }, 500);
-                
-                btn.innerText = '🔋 节能/后台模式'; btn.classList.replace('text-cyan-400', 'text-green-400'); btn.classList.replace('border-cyan-500', 'border-green-500');
-            } else {
-                appMode = 'full';
-                const simpleAudio = document.getElementById('player-audio-main');
-                if(simpleAudio) simpleAudio.pause();
-                
-                smApp.style.display = 'none'; fmApp.style.display = 'grid';
-                setTimeout(() => fmApp.style.opacity = '1', 50);
-                
-                btn.innerText = '⚡ 满血渲染模式'; btn.classList.replace('text-green-400', 'text-cyan-400'); btn.classList.replace('border-green-500', 'border-cyan-500');
+            <div class="flex-1 flex flex-col bg-black overflow-hidden relative" id="lib-dropzone">
+                <div class="h-8 border-b border-gray-800 bg-[#0a0a0c] flex items-center px-2 justify-between">
+                    <input type="text" id="lib-search" class="w-48 bg-black border border-gray-700 text-white text-[10px] px-2 py-1 outline-none focus:border-cyan-500" placeholder="Search...">
+                    <span class="text-[9px] text-green-500 animate-pulse font-mono" id="net-status">INIT SYNC...</span>
+                </div>
+                <div class="absolute inset-0 top-8 flex items-center justify-center text-gray-700 text-xl font-bold font-mono tracking-widest pointer-events-none opacity-30">DROP AUDIO HERE</div>
+                <div class="flex-1 overflow-y-auto">
+                    <table class="w-full text-[10px] text-left relative z-10" style="border-collapse: collapse;">
+                        <thead class="sticky top-0 bg-[#111] text-gray-500 shadow-md">
+                            <tr><th class="p-2 w-8">#</th><th class="p-2">TITLE</th><th class="p-2 w-24">ARTIST</th><th class="p-2 w-16">LOAD</th></tr>
+                        </thead>
+                        <tbody id="lib-list" class="text-gray-300"></tbody>
+                    </table>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <audio id="audio-A" crossorigin="anonymous"></audio>
+    <audio id="audio-B" crossorigin="anonymous"></audio>
+
+    <script>
+        const bootSeq = ["INIT KERNEL V8.0.1...", "LOADING DSP...", "CONNECTING GITHUB API...", "SYSTEM READY."];
+        async function runBoot() {
+            const out = document.getElementById('term-output');
+            for(let i=0; i<bootSeq.length; i++) {
+                out.innerHTML += `<div>> ${bootSeq[i]}</div>`;
+                await new Promise(r => setTimeout(r, 150));
+            }
+            document.getElementById('btn-engage').style.display = 'block';
+        }
+        window.onload = runBoot;
+
+        document.getElementById('btn-engage').onclick = () => {
+            document.getElementById('boot-screen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('boot-screen').style.display = 'none'; document.getElementById('app-container').style.opacity = '1'; sys.init(); }, 300);
+        };
+
+        let powerMode = 'MAX';
+        let actx;
+
+        // 系统级后台播放控制 (MediaSession API)
+        const updateMediaSession = (title, artist, coverUrl) => {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: title || 'Void Engine DJ', artist: artist || 'Github Drop',
+                    artwork: coverUrl ? [{ src: coverUrl, sizes: '512x512', type: 'image/jpeg' }] : []
+                });
+                navigator.mediaSession.setActionHandler('play', () => { sys.deckA.play(); sys.deckB.play(); });
+                navigator.mediaSession.setActionHandler('pause', () => { sys.deckA.pause(); sys.deckB.pause(); });
+            }
+        };
+
+        class DeckDSP {
+            constructor(id) {
+                this.id = id;
+                this.audio = document.getElementById(`audio-${id}`);
+                this.audio.preservesPitch = false;
+                this.state = { playing: false, bpm: 120, baseBpm: 120, pitch: 1.0, cues: [null, null, null, null], loop: { active: false, start: 0, end: 0, beats: 4 } };
+                this.ui = {
+                    title: document.getElementById(`d${id.toLowerCase()}-title`),
+                    artist: document.getElementById(`d${id.toLowerCase()}-artist`),
+                    time: document.getElementById(`d${id.toLowerCase()}-time`),
+                    bpm: document.getElementById(`d${id.toLowerCase()}-bpm`),
+                    pitchVal: document.getElementById(`d${id.toLowerCase()}-pitch-val`),
+                    btnPlay: document.getElementById(`d${id.toLowerCase()}-btn-play`),
+                    marker: document.getElementById(`d${id.toLowerCase()}-jog-marker`),
+                    jogBpm: document.getElementById(`d${id.toLowerCase()}-jog-bpm`),
+                    cover: document.getElementById(`d${id.toLowerCase()}-cover`)
+                };
+                this.bindAudioEvents();
+            }
+
+            buildNodes(masterCtx, dest) {
+                this.source = masterCtx.createMediaElementSource(this.audio);
+                this.eqH = masterCtx.createBiquadFilter(); this.eqH.type = "highshelf"; this.eqH.frequency.value = 2400;
+                this.eqM = masterCtx.createBiquadFilter(); this.eqM.type = "peaking"; this.eqM.frequency.value = 1000; this.eqM.Q.value = 1;
+                this.eqL = masterCtx.createBiquadFilter(); this.eqL.type = "lowshelf"; this.eqL.frequency.value = 250;
+                this.filter = masterCtx.createBiquadFilter(); this.filter.type = "lowpass"; this.filter.frequency.value = 20000;
+                this.gain = masterCtx.createGain(); this.gain.gain.value = 0.8;
+                this.analyser = masterCtx.createAnalyser(); this.analyser.fftSize = 256;
+
+                this.source.connect(this.eqH); this.eqH.connect(this.eqM); this.eqM.connect(this.eqL);
+                this.eqL.connect(this.filter); this.filter.connect(this.gain);
+                this.gain.connect(this.analyser); this.analyser.connect(dest);
+            }
+
+            load(track) {
+                this.audio.src = track.blob ? URL.createObjectURL(track.blob) : track.u;
+                this.audio.load();
+                this.ui.title.innerText = track.t; this.ui.artist.innerText = track.a || 'Unknown';
+                this.state.baseBpm = parseFloat(track.bpm) || 120;
+                this.updateBPM();
+                this.ui.cover.style.backgroundImage = track.cover ? `url(${track.cover})` : 'none';
+                this.state.cues = [null,null,null,null]; this.state.loop.active = false;
+                this.renderPads();
+                vis.drawStaticWave(this.id);
+                updateMediaSession(track.t, track.a, track.cover); // 触发后台登记
+            }
+
+            play() { if(!this.audio.src) return; actx.resume(); this.audio.play(); this.state.playing = true; this.ui.btnPlay.classList.add('active', `glow-${this.id.toLowerCase()}`); }
+            pause() { this.audio.pause(); this.state.playing = false; this.ui.btnPlay.classList.remove('active', `glow-${this.id.toLowerCase()}`); }
+            toggle() { this.state.playing ? this.pause() : this.play(); }
+            
+            cue() {
+                if(this.state.playing) { this.pause(); this.audio.currentTime = this.state.cues[0] || 0; }
+                else { this.state.cues[0] = this.audio.currentTime; this.play(); }
+                this.renderPads();
+            }
+
+            setPitch(val) {
+                let pct = (0.5 - val) * 0.16;
+                this.state.pitch = 1.0 + pct;
+                this.audio.playbackRate = this.state.pitch;
+                this.updateBPM();
+                this.ui.pitchVal.innerText = (pct>0?'+':'')+(pct*100).toFixed(2)+'%';
+            }
+
+            updateBPM() {
+                this.state.bpm = this.state.baseBpm * this.state.pitch;
+                this.ui.bpm.innerText = this.state.bpm.toFixed(2);
+                this.ui.jogBpm.innerText = this.state.bpm.toFixed(1);
+            }
+
+            setParam(param, v) {
+                if(!this.gain) return;
+                switch(param) {
+                    case 'gain': this.gain.gain.value = v * 1.5; break;
+                    case 'high': this.eqH.gain.value = (v - 0.5) * 40; break;
+                    case 'mid': this.eqM.gain.value = (v - 0.5) * 40; break;
+                    case 'low': this.eqL.gain.value = (v - 0.5) * 60; break;
+                    case 'filter':
+                        if(v < 0.5) { this.filter.type = "lowpass"; this.filter.frequency.value = 200 + (v * 2) * 19800; }
+                        else { this.filter.type = "highpass"; this.filter.frequency.value = 20 + ((v - 0.5) * 2) * 10000; }
+                        if(v > 0.45 && v < 0.55) { this.filter.type = "lowpass"; this.filter.frequency.value = 20000; }
+                        break;
+                }
+            }
+
+            handlePad(idx, type, ext) {
+                if(type === 'cue') {
+                    if(this.state.cues[idx] === null) this.state.cues[idx] = this.audio.currentTime;
+                    else { this.audio.currentTime = this.state.cues[idx]; if(!this.state.playing) this.play(); }
+                } else if(type === 'loop') {
+                    if(this.state.loop.active && this.state.loop.beats === ext) this.state.loop.active = false;
+                    else {
+                        this.state.loop.active = true; this.state.loop.beats = ext;
+                        this.state.loop.start = this.audio.currentTime;
+                        this.state.loop.end = this.state.loop.start + (ext / (this.state.baseBpm / 60));
+                    }
+                }
+                this.renderPads();
+            }
+
+            renderPads() {
+                const pads = document.querySelectorAll(`.pad-${this.id.toLowerCase()}`);
+                pads.forEach((p, i) => {
+                    p.classList.remove('active');
+                    if(i < 4 && this.state.cues[i] !== null) p.classList.add('active');
+                    if(i >= 4 && this.state.loop.active && this.state.loop.beats === [1,2,4,8][i-4]) p.classList.add('active');
+                });
+            }
+
+            bindAudioEvents() {
+                this.audio.addEventListener('timeupdate', () => {
+                    let cur = this.audio.currentTime, dur = this.audio.duration || 0;
+                    if(this.state.loop.active && cur >= this.state.loop.end) this.audio.currentTime = this.state.loop.start;
+                    
+                    let rem = dur - cur;
+                    let m = Math.floor(rem/60), s = Math.floor(rem%60), ms = Math.floor((rem%1)*100);
+                    this.ui.time.innerText = `-${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms.toString().padStart(2,'0')}`;
+                    
+                    if (powerMode === 'MAX' || Math.random() > 0.5) {
+                        let rot = (cur * 199.8) % 360; 
+                        this.ui.marker.style.transform = `translateX(-50%) rotate(${rot}deg)`;
+                    }
+                });
             }
         }
-        
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
-            else document.exitFullscreen();
-        }
 
-        // 【核心修复】：聚合统一的数据拉取中心，彻底解决双轨同时请求导致的 403 限流和错误
-        const DataManager = {
-            async fetchAll() {
-                const statusFM = document.getElementById('sync-status');
-                const titleSM = document.querySelector('#title'); // 省电模式的 UI 尚未被插入，但在 DOM 中找找看，如果有了就用
+        const sys = {
+            deckA: new DeckDSP('A'), deckB: new DeckDSP('B'),
+            masterGain: null, crossA: null, crossB: null,
+            init() {
+                actx = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = actx.createGain(); this.masterGain.connect(actx.destination);
+                this.crossA = actx.createGain(); this.crossA.connect(this.masterGain);
+                this.crossB = actx.createGain(); this.crossB.connect(this.masterGain);
+                this.deckA.buildNodes(actx, this.crossA);
+                this.deckB.buildNodes(actx, this.crossB);
+
+                ui.bindAll(); vis.start(); lib.init();
+            },
+            setCrossfader(val) {
+                this.crossA.gain.value = Math.cos(val * 0.5 * Math.PI);
+                this.crossB.gain.value = Math.cos((1.0 - val) * 0.5 * Math.PI);
+            }
+        };
+
+        const vis = {
+            ctxA: document.getElementById('canvas-wave-a').getContext('2d'),
+            ctxB: document.getElementById('canvas-wave-b').getContext('2d'),
+            ctxOsc: document.getElementById('canvas-master-osc')?.getContext('2d'),
+            vuL: document.getElementById('vu-l'), vuR: document.getElementById('vu-r'),
+            lastDraw: 0,
+            
+            start() {
+                this.loop = this.loop.bind(this);
+                requestAnimationFrame(this.loop);
+                let leds = ''; for(let i=0; i<20; i++) leds += `<div class="vu-led" style="--c: ${i>17?'#f00':(i>14?'#fa0':'#0f0')}"></div>`;
+                this.vuL.innerHTML = leds; this.vuR.innerHTML = leds;
+            },
+
+            drawStaticWave(id) {
+                let ctx = id === 'A' ? this.ctxA : this.ctxB;
+                let w = ctx.canvas.width = ctx.canvas.clientWidth; let h = ctx.canvas.height = ctx.canvas.clientHeight;
+                ctx.clearRect(0, 0, w, h); ctx.fillStyle = `rgba(${id==='A'?'0,242,255':'255,0,85'}, 0.2)`;
+                ctx.beginPath(); ctx.moveTo(0, h/2);
+                for(let i=0; i<w; i+=4) ctx.lineTo(i, h/2 - (Math.sin(i*0.05)*Math.cos(i*0.01)*(h/3)+(Math.random()*5)));
+                for(let i=w; i>=0; i-=4) ctx.lineTo(i, h/2 + (Math.sin(i*0.05)*Math.cos(i*0.01)*(h/3)+(Math.random()*5)));
+                ctx.fill();
+            },
+
+            loop() {
+                requestAnimationFrame(this.loop);
+                if(!actx || actx.state === 'suspended') return;
+
+                let now = performance.now();
+                if (now - this.lastDraw < (powerMode === 'ECO' ? 80 : 0)) return;
+                this.lastDraw = now;
+
+                const drawSpec = (deck, ctx, colorHex) => {
+                    if(!deck.analyser || !deck.state.playing) return;
+                    let w = ctx.canvas.width, h = ctx.canvas.height;
+                    let data = new Uint8Array(deck.analyser.frequencyBinCount);
+                    deck.analyser.getByteFrequencyData(data);
+                    
+                    ctx.clearRect(0, 0, w, h); ctx.fillStyle = colorHex; ctx.fillRect(0, h/2, w, 1);
+                    let bars = 64, step = w / bars;
+                    for(let i=0; i<bars; i++) {
+                        let bh = (data[i*2] / 255.0) * (h/2);
+                        ctx.fillStyle = colorHex + '80'; ctx.fillRect(i*step, h/2 - bh, step-1, bh*2);
+                    }
+                    ctx.fillStyle = '#fff'; ctx.fillRect((deck.audio.currentTime / (deck.audio.duration || 1)) * w, 0, 2, h);
+                };
+                drawSpec(sys.deckA, this.ctxA, '#00f2ff'); drawSpec(sys.deckB, this.ctxB, '#ff0055');
+
+                if (this.ctxOsc && powerMode === 'MAX') {
+                    let oscW = this.ctxOsc.canvas.width = this.ctxOsc.canvas.clientWidth;
+                    let oscH = this.ctxOsc.canvas.height = this.ctxOsc.canvas.clientHeight;
+                    this.ctxOsc.clearRect(0,0,oscW,oscH);
+                    
+                    let oscA = new Uint8Array(sys.deckA.analyser.frequencyBinCount); sys.deckA.analyser.getByteTimeDomainData(oscA);
+                    let oscB = new Uint8Array(sys.deckB.analyser.frequencyBinCount); sys.deckB.analyser.getByteTimeDomainData(oscB);
+
+                    this.ctxOsc.lineWidth = 1; this.ctxOsc.strokeStyle = 'rgba(0,242,255,0.8)';
+                    this.ctxOsc.beginPath(); for(let i=0; i<oscW; i++) { let y = (oscA[i]/128.0) * oscH/2; i===0?this.ctxOsc.moveTo(i,y):this.ctxOsc.lineTo(i,y); } this.ctxOsc.stroke();
+                    this.ctxOsc.strokeStyle = 'rgba(255,0,85,0.8)';
+                    this.ctxOsc.beginPath(); for(let i=0; i<oscW; i++) { let y = (oscB[i]/128.0) * oscH/2; i===0?this.ctxOsc.moveTo(i,y):this.ctxOsc.lineTo(i,y); } this.ctxOsc.stroke();
+                    
+                    let vA = (Math.max(...oscA)-128)/128 * sys.deckA.gain.gain.value * sys.crossA.gain.value;
+                    let vB = (Math.max(...oscB)-128)/128 * sys.deckB.gain.gain.value * sys.crossB.gain.value;
+                    let mVol = (vA + vB) * sys.masterGain.gain.value * 2;
+                    let actLeds = Math.min(20, Math.floor(mVol * 20));
+                    
+                    let cL = this.vuL.children, cR = this.vuR.children;
+                    for(let i=0; i<20; i++) {
+                        cL[i].style.backgroundColor = i < actLeds ? cL[i].style.getPropertyValue('--c') : '#111';
+                        cR[i].style.backgroundColor = i < actLeds*0.9 ? cR[i].style.getPropertyValue('--c') : '#111';
+                    }
+                }
                 
-                if(statusFM) statusFM.innerText = "SYNCING API...";
+                let d = new Date();
+                document.getElementById('master-clock').innerText = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+            }
+        };
+
+        const ui = {
+            bindAll() {
+                document.getElementById('btn-power').addEventListener('click', (e) => {
+                    powerMode = powerMode === 'MAX' ? 'ECO' : 'MAX';
+                    e.target.innerText = powerMode === 'MAX' ? 'MAX POWER' : 'ECO MODE';
+                    e.target.className = powerMode === 'MAX' ? 'btn-hw px-3 h-7 text-[10px] text-red-500 active glow-b' : 'btn-hw px-3 h-7 text-[10px] text-green-500 shadow-[0_0_10px_#0f0]';
+                    if (powerMode === 'ECO' && vis.ctxOsc) vis.ctxOsc.clearRect(0,0, vis.ctxOsc.canvas.width, vis.ctxOsc.canvas.height); // clear osc in eco
+                });
+
+                const bindDrag = (els, type, cb) => {
+                    els.forEach(el => {
+                        let isDrag = false, startY = 0;
+                        const start = (y) => { isDrag=true; startY=y; };
+                        const move = (y) => { if(!isDrag) return; cb(el, startY - y, y); if(type==='fader') startY=y; };
+                        
+                        el.addEventListener('mousedown', e => start(e.clientY));
+                        el.addEventListener('touchstart', e => start(e.touches[0].clientY), {passive:true});
+                        window.addEventListener('mousemove', e => move(e.clientY));
+                        window.addEventListener('touchmove', e => move(e.touches?.[0].clientY), {passive:true});
+                        window.addEventListener('mouseup', () => isDrag=false);
+                        window.addEventListener('touchend', () => isDrag=false);
+                    });
+                };
+
+                bindDrag(document.querySelectorAll('.knob-wrapper'), 'knob', (el, delta) => {
+                    const phys = el.querySelector('.knob-physical');
+                    let cur = parseFloat(el.dataset.val || 0.5);
+                    cur = Math.max(0, Math.min(1, cur + delta*0.005));
+                    el.dataset.val = cur;
+                    phys.style.transform = `rotate(${(cur-0.5)*270}deg)`;
+                    let dId = el.dataset.deck;
+                    if(dId==='M') sys.masterGain.gain.value = cur * 2;
+                    else sys[`deck${dId}`].setParam(el.dataset.param, cur);
+                });
+
+                bindDrag(document.querySelectorAll('.fader-wrapper'), 'fader', (el, delta, curY) => {
+                    const track = el.querySelector('.fader-track'), handle = el.querySelector('.fader-handle');
+                    const rect = track.getBoundingClientRect();
+                    let isCross = track.classList.contains('cross'), pct = 0;
+                    
+                    if(isCross) {
+                        // 横向逻辑有点特殊，用全局鼠标X获取更好，这里简化处理
+                        pct = 0.5; // 占位，需改为X轴抓取
+                    } else {
+                        pct = 1.0 - ((curY - rect.top) / rect.height);
+                    }
+                    pct = Math.max(0, Math.min(1, pct));
+                    handle.style.bottom = (pct*100)+'%';
+                    let dId = track.dataset.deck;
+                    if(track.classList.contains('vol')) sys[`deck${dId}`].setParam('gain', pct);
+                    if(track.classList.contains('pitch')) sys[`deck${dId}`].setPitch(1.0 - pct);
+                });
+                
+                // 修复 Crossfader X轴专属监听
+                const cross = document.querySelector('.fader-track.cross');
+                if(cross) {
+                    let cDrag=false;
+                    cross.parentElement.addEventListener('mousedown', ()=>cDrag=true);
+                    cross.parentElement.addEventListener('touchstart', ()=>cDrag=true, {passive:true});
+                    const cMove = (x) => {
+                        if(!cDrag) return;
+                        let rect = cross.getBoundingClientRect();
+                        let pct = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+                        cross.querySelector('.fader-handle').style.left = (pct*100)+'%';
+                        sys.setCrossfader(pct);
+                    };
+                    window.addEventListener('mousemove', e => cMove(e.clientX));
+                    window.addEventListener('touchmove', e => cMove(e.touches?.[0].clientX), {passive:true});
+                    window.addEventListener('mouseup', ()=>cDrag=false);
+                    window.addEventListener('touchend', ()=>cDrag=false);
+                }
+
+                ['A','B'].forEach(id => {
+                    document.getElementById(`d${id.toLowerCase()}-btn-play`).onclick = () => sys[`deck${id}`].toggle();
+                    document.getElementById(`d${id.toLowerCase()}-btn-cue`).onclick = () => sys[`deck${id}`].cue();
+                    
+                    const jog = document.getElementById(`d${id.toLowerCase()}-jog`);
+                    let jDrag=false, lastY=0;
+                    const jStart = (y) => { jDrag=true; lastY=y; if(sys[`deck${id}`].state.playing) sys[`deck${id}`].audio.pause(); };
+                    jog.addEventListener('mousedown', e => jStart(e.clientY)); jog.addEventListener('touchstart', e => jStart(e.touches[0].clientY), {passive:true});
+                    const jMove = (y) => { if(!jDrag || !sys[`deck${id}`].audio.src) return; sys[`deck${id}`].audio.currentTime = Math.max(0, sys[`deck${id}`].audio.currentTime + (lastY-y)*0.05); lastY=y; };
+                    window.addEventListener('mousemove', e => jMove(e.clientY)); window.addEventListener('touchmove', e => jMove(e.touches?.[0].clientY), {passive:true});
+                    const jEnd = () => { if(jDrag && sys[`deck${id}`].state.playing) sys[`deck${id}`].audio.play(); jDrag=false; };
+                    window.addEventListener('mouseup', jEnd); window.addEventListener('touchend', jEnd);
+                });
+
+                document.querySelectorAll('.pad-hw').forEach(pad => {
+                    const trig = () => {
+                        let d = sys[`deck${pad.dataset.deck}`];
+                        if(pad.classList.contains('btn-hc')) d.handlePad(parseInt(pad.dataset.idx), 'cue');
+                        if(pad.classList.contains('btn-loop')) d.handlePad(null, 'loop', parseInt(pad.dataset.beats));
+                    };
+                    pad.addEventListener('mousedown', trig); pad.addEventListener('touchstart', (e)=>{e.preventDefault(); trig();}, {passive:false});
+                });
+            }
+        };
+
+        const lib = {
+            db: {}, currentList: [], selectedIdx: -1,
+            ui: { tree: document.getElementById('lib-tree'), list: document.getElementById('lib-list'), search: document.getElementById('lib-search'), net: document.getElementById('net-status') },
+            
+            async init() {
+                this.ui.search.addEventListener('input', e => this.filter(e.target.value));
+                this.setupDragDrop();
                 
                 try {
+                    this.ui.net.innerText = 'SYNCING GITHUB...';
                     const res = await fetch('https://api.github.com/repos/zhangzhanhang855/musiconly/contents/');
-                    if (!res.ok) throw new Error("Github repo limit/error");
                     const items = await res.json();
                     
-                    let allTracksFM = [];
-                    let playlistsSM = { 'Root': [] };
-
-                    const processItems = (data, pName) => {
-                        // 防止限流时 data 变成错误对象导致 data.filter 报错崩溃
-                        if (!Array.isArray(data)) return; 
-                        
-                        data.filter(f => /\.(mp3|flac|wav|m4a)$/i.test(f.name)).forEach(f => {
-                            const trackTitle = f.name.replace(/\.[^/.]+$/, "");
-                            
-                            // 构造给满血版用的对象
-                            allTracksFM.push({
-                                title: trackTitle,
-                                artist: pName.replace('GH-', ''),
-                                url: f.download_url,
-                                playlist: pName,
-                                bpm: (Math.random() * 40 + 100).toFixed(2)
-                            });
-                            
-                            // 构造给单轨省电版用的对象
-                            let smPName = pName === 'GH-Root' ? 'Root' : pName;
-                            if(!playlistsSM[smPName]) playlistsSM[smPName] = [];
-                            playlistsSM[smPName].push({ t: trackTitle, u: f.download_url });
-                        });
-                    };
-
-                    processItems(items, 'GH-Root');
+                    const filterAudio = (arr) => arr.filter(f => /\.(mp3|flac|wav|m4a)$/i.test(f.name)).map(f => ({ t: f.name.replace(/\.[^/.]+$/, ""), a: 'Github Repo', bpm: (120+Math.random()*10).toFixed(1), u: f.download_url }));
                     
-                    const folders = items.filter(i => i.type === "dir");
-                    for (let f of folders) {
-                        if(statusFM) statusFM.innerText = `SYNCING /${f.name}...`;
-                        const subRes = await fetch(f.url);
-                        if (subRes.ok) {
-                            const subData = await subRes.json();
-                            processItems(subData, 'GH-' + f.name);
-                        }
+                    this.db['Root'] = filterAudio(items);
+                    
+                    // 抓取子文件夹
+                    const folders = items.filter(i => i.type === 'dir');
+                    for(let f of folders) {
+                        this.ui.net.innerText = `FETCHING DIR: ${f.name.substring(0,8)}..`;
+                        const sub = await (await fetch(f.url)).json();
+                        const tracks = filterAudio(sub);
+                        if(tracks.length > 0) this.db[f.name] = tracks;
                     }
+                    
+                    this.ui.net.innerText = 'SYNC OK';
+                    this.renderTree();
+                    this.setPlaylist('Root');
+                } catch(e) { this.ui.net.innerText = 'API LIMIT / OFFLINE'; this.db['Local'] = []; this.renderTree(); }
+            },
 
-                    if(statusFM) statusFM.innerText = "SYNC COMPLETE";
-                    setTimeout(() => { if(statusFM) statusFM.innerText = ""; }, 3000);
+            renderTree() {
+                this.ui.tree.innerHTML = Object.keys(this.db).map(name => `
+                    <div class="text-[10px] text-gray-300 p-2 hover:bg-white/5 cursor-pointer truncate" onclick="lib.setPlaylist('${name}')">🗂️ ${name}</div>
+                `).join('');
+            },
 
-                    // 统一分发给两个引擎渲染
-                    if (window.libFM) window.libFM.loadData(allTracksFM);
-                    if (window.smAppEngine) window.smAppEngine.loadData(playlistsSM);
-
-                } catch (e) {
-                    if(statusFM) statusFM.innerText = "SYNC FAILED";
-                    console.error("Fetch Error:", e);
-                }
-            }
-        };
-
-        function bootSystem() {
-            document.getElementById('boot-overlay').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('boot-overlay').style.display = 'none';
-                
-                // 初始化双引擎界面
-                initSimpleMode(); 
-                engine.init();    
-                
-                // 一键安全分发数据给两台机器
-                DataManager.fetchAll();
-                
-                if(appMode === 'simple') { document.getElementById('simple-mode-app').style.display = 'flex'; } 
-                else { document.getElementById('full-mode-app').style.display = 'grid'; setTimeout(() => document.getElementById('full-mode-app').style.opacity = '1', 50); }
-            }, 800);
-        }
-
-        // ==========================================
-        // 引擎 A: 省电单轨极简模式 (Simple Mode Engine)
-        // ==========================================
-        function initSimpleMode() {
-            const winObj = { id: 'main', onDestroy: () => {} };
-            const content = document.getElementById('win-content-' + winObj.id);
-
-            const styleEl = document.createElement('style');
-            styleEl.innerHTML = `#win-content-${winObj.id} { --neon: #00f2ff; font-family: 'Inter', sans-serif; background: #050505; color: #fff; height: 100%; border-radius: 12px; overflow: hidden; } #win-content-${winObj.id} .dj-system { display: grid; grid-template-columns: 1.5fr 200px 1.2fr; gap: 10px; height: 100%; width: 100%; box-sizing: border-box; } #win-content-${winObj.id} .module { background: #0d0d0d; border: 1px solid #222; border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; position: relative; } #win-content-${winObj.id} .knob-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 12px; cursor: ns-resize; touch-action: none; } #win-content-${winObj.id} .knob-physical { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #444, #111); border: 3px solid #000; position: relative; transform: rotate(0deg); transition: transform 0.05s linear; } #win-content-${winObj.id} .knob-physical::after { content: ''; position: absolute; top: 5px; left: 50%; width: 3px; height: 8px; background: var(--neon); transform: translateX(-50%); border-radius: 2px; } #win-content-${winObj.id} .fader-track { width: 14px; height: 160px; background: #000; border-radius: 7px; position: relative; border: 1px solid #222; cursor: ns-resize; touch-action: none; } #win-content-${winObj.id} .fader-handle { width: 40px; height: 44px; background: linear-gradient(180deg, #444 0%, #222 100%); border-radius: 4px; position: absolute; left: -13px; bottom: 50%; border: 1px solid #000; box-shadow: 0 8px 16px rgba(0,0,0,0.5); transition: bottom 0.05s linear; } #win-content-${winObj.id} .pad { height: 42px; background: #1a1a1a; border-radius: 4px; border-bottom: 4px solid #000; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 900; color: #555; transition: all 0.05s; } #win-content-${winObj.id} .pad.lit { background: var(--neon); color: #000; border-bottom: 0; transform: translateY(3px); box-shadow: 0 0 25px var(--neon); } #win-content-${winObj.id} .hardware-btn { background: linear-gradient(180deg, #252525 0%, #111 100%); border: 1px solid #333; border-radius: 4px; color: #aaa; font-family: 'Share Tech Mono', monospace; font-size: 10px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: all 0.1s; } #win-content-${winObj.id} .vinyl-wrap { width: 280px; height: 280px; border-radius: 50%; background: #050505; display: flex; align-items: center; justify-content: center; cursor: grab; position: relative; touch-action: none; } #win-content-${winObj.id} .vinyl-disk { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, #252525 0%, #0a0a0a 60%, #000 100%); border: 10px solid #2a2a2a; position: relative; pointer-events: none; box-shadow: inset 0 0 15px #000, 0 10px 30px rgba(0,0,0,0.8); } #win-content-${winObj.id} .vinyl-disk::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0, transparent 2px, rgba(255,255,255,0.02) 3px); } #win-content-${winObj.id} .art-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; border-radius: 50%; border: 4px solid #333; background: #111; z-index: 10; overflow: hidden; pointer-events: none; box-shadow: 0 0 0 1px #000, 0 0 0 2.5px var(--neon), 0 8px 20px rgba(0,0,0,0.6); } #win-content-${winObj.id} #cover-art-${winObj.id} { width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; transition: opacity 0.4s ease; } #win-content-${winObj.id} #cover-art-${winObj.id}.loaded { opacity: 1; } #win-content-${winObj.id}.is-playing .vinyl-disk { animation: rotate-v-${winObj.id} 6s linear infinite; } #win-content-${winObj.id}.is-playing .art-center { animation: rotate-a-${winObj.id} 6s linear infinite; } @keyframes rotate-v-${winObj.id} { to { transform: rotate(360deg); } } @keyframes rotate-a-${winObj.id} { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } } #win-content-${winObj.id} .lcd-main { background: #050a05; border-radius: 4px; padding: 12px; font-family: 'Share Tech Mono', monospace; box-shadow: inset 0 0 40px #000; border: 2px solid #000; } @media (max-width: 900px) { #win-content-${winObj.id} .dj-system { grid-template-columns: 1fr; grid-template-rows: auto auto 300px; overflow-y: auto; } }`;
-            content.appendChild(styleEl);
-
-            content.innerHTML += '<div class="dj-system p-3 bg-[#161616] border-4 border-[#222] rounded-xl font-sans select-none"><section class="module deck-section p-4"><div class="lcd-main"><div class="flex justify-between text-[9px] opacity-30 mb-1 uppercase"><span>Engine v2 [<span class="text-cyan-400" id="lcd-mode">LIST</span>]</span><span>Deck A</span></div><div class="text-xl font-bold tracking-tighter text-cyan-400 truncate" id="title-sm">READY</div><div class="flex justify-between mt-4"><div class="text-2xl font-black italic font-mono" id="cur-time">00:00:00</div><div class="text-right text-[10px] text-cyan-800 font-mono">BPM: 128.00</div></div></div><div class="flex-1 flex items-center justify-center my-4"><div class="vinyl-wrap"><div class="vinyl-disk"></div><div class="art-center"><div id="cover-art-' + winObj.id + '"></div><span class="absolute inset-0 flex items-center justify-center text-3xl" id="cover-emoji">💿</span></div></div></div><div class="flex justify-between items-center"><div class="flex gap-2 items-center"><button class="w-14 h-14 bg-black border border-white/10 rounded-full flex items-center justify-center shadow-xl hover:border-cyan-500 transition-colors focus:outline-none" id="btn-play"><div class="w-0 h-0 border-y-[8px] border-y-transparent border-l-[14px] border-l-white ml-0.5" id="play-icon"></div></button><button class="w-12 h-10 hardware-btn flex items-center justify-center" id="btn-next">NEXT</button><button class="px-2 h-10 hardware-btn border-cyan-500/30 text-cyan-400 text-[9px]" id="mode-btn">MODE: LIST</button></div><div class="flex flex-col items-center gap-1"><div class="fader-track h-20 w-8"><div class="fader-handle w-8 h-5 left-[-10px] bottom-[50%]"></div></div><span class="text-[8px] opacity-20 font-black uppercase">Pitch</span></div></div></section><section class="module mixer-section p-4 flex flex-col items-center justify-center gap-2"><div class="knob-container"><div class="knob-physical"></div><span class="text-[8px] font-bold opacity-30 mt-0.5 uppercase">Gain</span></div><div class="knob-container"><div class="knob-physical" style="transform: rotate(45deg);"></div><span class="text-[8px] font-bold opacity-30 mt-0.5 uppercase">High</span></div><div class="knob-container"><div class="knob-physical" style="transform: rotate(-20deg);"></div><span class="text-[8px] font-bold opacity-30 mt-0.5 uppercase">Low</span></div><div class="fader-track mt-2"><div class="fader-handle"></div></div><span class="text-[8px] font-black opacity-20 uppercase">Master</span></section><aside class="module crate-section flex flex-col"><div class="grid grid-cols-4 gap-1 p-2"><div class="pad">CUE 1</div><div class="pad">CUE 2</div><div class="pad">LOOP</div><div class="pad">FX</div></div><div class="p-2 bg-black/40 border-y border-white/5"><div class="flex gap-1 overflow-x-auto no-scrollbar mb-2 pb-1" id="playlist-nav-sm"></div><input class="w-full bg-black border border-white/10 p-2 text-[10px] outline-none focus:border-cyan-500/50 text-white" id="search-input" placeholder="FIND TRACK..." type="text"></div><div class="flex-1 overflow-y-auto"><ul id="track-list"></ul></div><div class="p-2 bg-black/60 border-t border-white/5"><p class="text-[8px] text-cyan-600/50 font-mono italic uppercase">Broadcast Active</p></div></aside></div><audio id="player-audio-' + winObj.id + '" playsinline webkit-playsinline></audio>';
-
-            const audio = content.querySelector('#player-audio-' + winObj.id);
-            const titleEl = content.querySelector('#title-sm');
-            const curTimeEl = content.querySelector('#cur-time');
-            const playIcon = content.querySelector('#play-icon');
-            const btnPlay = content.querySelector('#btn-play');
-            const btnNext = content.querySelector('#btn-next');
-            const btnMode = content.querySelector('#mode-btn');
-            const lcdMode = content.querySelector('#lcd-mode');
-            const navContainer = content.querySelector('#playlist-nav-sm');
-            const listContainer = content.querySelector('#track-list');
-            const searchInput = content.querySelector('#search-input');
-            const artEl = content.querySelector('#cover-art-' + winObj.id);
-            const emjEl = content.querySelector('#cover-emoji');
-            const pads = content.querySelectorAll('.pad');
-
-            let playlists = {};
-            let currentPlaylist = 'Root';
-            let filteredTracks = [];
-            let curIdx = 0;
-            let loopMode = 'list';
-            let currentCoverObjectURL = null;
-
-            // 交互事件绑定
-            function bindScopedInteraction(targets, type, callback) {
-                targets.forEach(el => {
-                    let isMoving = false; let startPos = 0;
-                    const start = (e) => { isMoving = true; startPos = e.clientY || e.touches?.[0]?.clientY || 0; e.preventDefault(); };
-                    const move = (e) => {
-                        if (!isMoving) return;
-                        let currentPos = e.clientY || e.touches?.[0]?.clientY || 0;
-                        let delta = startPos - currentPos; callback(el, delta, currentPos);
-                        if (type === 'fader') startPos = currentPos;
-                    };
-                    const end = () => { isMoving = false; };
-                    el.addEventListener('mousedown', start); el.addEventListener('touchstart', start, { passive: false });
-                    window.addEventListener('mousemove', move); window.addEventListener('touchmove', move, { passive: false });
-                    window.addEventListener('mouseup', end); window.addEventListener('touchend', end);
-                });
-            }
-
-            bindScopedInteraction(content.querySelectorAll('.knob-container'), 'knob', (el, delta) => {
-                const knob = el.querySelector('.knob-physical');
-                let currentRotation = parseInt(knob.style.transform.replace('rotate(', '').replace('deg)', '')) || 0;
-                let newRot = Math.max(-150, Math.min(150, currentRotation + delta));
-                knob.style.transform = 'rotate(' + newRot + 'deg)';
-            });
-
-            bindScopedInteraction(content.querySelectorAll('.fader-track'), 'fader', (el, delta, currentY) => {
-                const handle = el.querySelector('.fader-handle'); const rect = el.getBoundingClientRect();
-                let percent = 1 - ((currentY - rect.top) / rect.height);
-                percent = Math.max(0, Math.min(1, percent));
-                handle.style.bottom = (percent * 100) + '%';
-            });
-
-            pads.forEach(pad => { pad.onclick = () => { pad.classList.add('lit'); setTimeout(() => pad.classList.remove('lit'), 100); }; });
-
-            btnMode.onclick = () => {
-                const modes = ['list', 'random', 'single'];
-                loopMode = modes[(modes.indexOf(loopMode) + 1) % modes.length];
-                btnMode.innerText = 'MODE: ' + loopMode.toUpperCase();
-                lcdMode.innerText = loopMode === 'random' ? 'RAND' : (loopMode === 'single' ? 'SGLE' : 'LIST');
-                btnMode.style.borderColor = 'var(--neon)'; btnMode.style.boxShadow = '0 0 15px var(--neon)';
-                setTimeout(() => { btnMode.style.borderColor = 'rgba(6, 182, 212, 0.3)'; btnMode.style.boxShadow = 'none'; }, 150);
-            };
-
-            const renderNav = () => {
-                navContainer.innerHTML = Object.keys(playlists).map(name => 
-                    `<button class="text-[9px] px-2 py-0.5 border border-white/10 hover:bg-white/5 uppercase whitespace-nowrap btn-nav" data-name="${name}">${name}</button>`
-                ).join('');
-                navContainer.querySelectorAll('.btn-nav').forEach(btn => { btn.onclick = () => switchPlaylist(btn.dataset.name); });
-            };
-
-            const renderList = () => {
-                listContainer.innerHTML = filteredTracks.map((s, i) => {
-                    const activeClass = curIdx === i ? 'text-cyan-400 bg-cyan-900/10' : 'text-gray-400';
-                    const numStr = String(i + 1).padStart(2, '0');
-                    return `<li class="track-item p-2 border-b border-white/5 text-[10px] font-mono cursor-pointer ${activeClass}" data-idx="${i}">${numStr} . ${s.t}</li>`;
-                }).join('');
-                listContainer.querySelectorAll('.track-item').forEach(item => { item.onclick = () => executeLoad(parseInt(item.dataset.idx), true); });
-            };
-
-            const switchPlaylist = (name) => {
-                currentPlaylist = name; filteredTracks = [...playlists[name]];
-                renderList();
-                if (filteredTracks.length > 0) executeLoad(0, false);
-            };
-
-            const executeLoad = (idx, auto) => {
-                if (filteredTracks.length === 0) return;
-                curIdx = idx; const song = filteredTracks[curIdx];
-                
-                audio.src = song.u; audio.load(); titleEl.innerText = song.t;
-                artEl.classList.remove('loaded'); artEl.style.backgroundImage = 'none'; emjEl.style.opacity = '1';
-
-                if (currentCoverObjectURL) { URL.revokeObjectURL(currentCoverObjectURL); currentCoverObjectURL = null; }
-                if (auto) audio.play().catch(e => console.log('Wait gesture:', e));
-                
-                if ('mediaSession' in navigator) {
-                    navigator.mediaSession.metadata = new MediaMetadata({ title: song.t, artist: 'VOID DJ Station (Simple)', artwork: [{ src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMTExIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZpbGw9IiMwMGYyZmYiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iNDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5WT0lEIERKPC90ZXh0Pjwvc3ZnPg==', sizes: '512x512', type: 'image/svg+xml' }] });
-                    navigator.mediaSession.setActionHandler('play', () => audio.play());
-                    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
-                    navigator.mediaSession.setActionHandler('nexttrack', () => executeLoad((curIdx + 1) % filteredTracks.length, true));
-                }
-
-                fetch(song.u).then(res => { if (!res.ok) throw new Error(); return res.blob(); })
-                    .then(audioBlob => {
-                        if (!window.jsmediatags) return;
-                        new window.jsmediatags.Reader(audioBlob).read({
-                            onSuccess: (tag) => {
-                                const pic = tag.tags.picture;
-                                if (pic) {
-                                    const byteArray = new Uint8Array(pic.data); const coverBlob = new Blob([byteArray], { type: pic.format });
-                                    currentCoverObjectURL = URL.createObjectURL(coverBlob);
-                                    artEl.style.backgroundImage = `url(${currentCoverObjectURL})`; artEl.classList.add('loaded'); emjEl.style.opacity = '0';
-                                    if ('mediaSession' in navigator) navigator.mediaSession.metadata.artwork = [{ src: currentCoverObjectURL, sizes: '512x512', type: 'image/jpeg' }];
-                                }
-                            }, onError: () => {}
-                        });
-                    }).catch(() => {});
-                renderList();
-            };
-
-            audio.onended = () => {
-                if (filteredTracks.length === 0) return;
-                if (loopMode === 'single') executeLoad(curIdx, true);
-                else if (loopMode === 'random') {
-                    let nextIndex = Math.floor(Math.random() * filteredTracks.length);
-                    if (filteredTracks.length > 1 && nextIndex === curIdx) nextIndex = (nextIndex + 1) % filteredTracks.length;
-                    executeLoad(nextIndex, true);
-                } else executeLoad((curIdx + 1) % filteredTracks.length, true);
-            };
-
-            btnPlay.onclick = () => { audio.paused ? audio.play() : audio.pause(); };
-            btnNext.onclick = () => { executeLoad((curIdx + 1 + filteredTracks.length) % filteredTracks.length, true); };
-
-            audio.onplay = () => { content.classList.add('is-playing'); playIcon.style.borderLeftColor = '#00f2ff'; };
-            audio.onpause = () => { content.classList.remove('is-playing'); playIcon.style.borderLeftColor = '#fff'; };
-            audio.ontimeupdate = () => {
-                let s = audio.currentTime; if (isNaN(s)) { curTimeEl.innerText = '00:00:00'; return; }
-                let m = Math.floor(s / 60), sec = Math.floor(s % 60), ms = Math.floor((s % 1) * 100);
-                curTimeEl.innerText = m.toString().padStart(2, '0') + ':' + sec.toString().padStart(2, '0') + ':' + ms.toString().padStart(2, '0');
-            };
-
-            searchInput.oninput = () => {
-                const val = searchInput.value.toLowerCase();
-                filteredTracks = playlists[currentPlaylist].filter(s => s.t.toLowerCase().includes(val));
-                renderList();
-            };
-
-            // 暴露注入数据的接口给 DataManager
-            window.smAppEngine = {
-                loadData(pData) {
-                    playlists = { ...playlists, ...pData };
-                    renderNav();
-                    if(playlists['Root'] && playlists['Root'].length > 0) switchPlaylist('Root');
-                    else switchPlaylist(Object.keys(playlists)[0]);
-                }
-            };
-        }
-
-
-        // ==========================================
-        // 引擎 B: 满血双轨打碟机 (Full Mode AudioContext)
-        // ==========================================
-        let audioCtxFM;
-        class LibraryFM {
-            constructor() {
-                this.tracks = []; this.playlists = new Set(['All Tracks', 'Local Drop']); 
-                this.currentPlaylist = 'All Tracks'; this.filtered = []; this.selectedIndex = -1;
-            }
-            // 暴露供 DataManager 数据批量导入
-            loadData(fetchedTracks) {
-                fetchedTracks.forEach(t => {
-                    t.id = Date.now() + Math.random();
-                    this.tracks.push(t);
-                    this.playlists.add(t.playlist);
-                });
-                this.renderPlaylists();
-                this.filter();
-            }
-            addTrack(track) {
-                track.id = Date.now() + Math.random();
-                if(!track.bpm) track.bpm = (Math.random() * 40 + 100).toFixed(2); 
-                const playlistName = track.playlist || 'Local Drop'; track.playlist = playlistName;
-                this.tracks.push(track); this.playlists.add(playlistName); 
-                this.renderPlaylists(); this.filter();
-            }
-            filter(query) {
-                const searchBox = document.getElementById('search-box-fm');
-                const q = query !== undefined ? query : (searchBox ? searchBox.value : '');
-                this.filtered = this.tracks.filter(t => {
-                    let match = t.title.toLowerCase().includes(q.toLowerCase());
-                    if (this.currentPlaylist !== 'All Tracks') match = match && (t.playlist === this.currentPlaylist);
-                    return match;
-                });
+            setPlaylist(name) {
+                this.currentList = this.db[name] || [];
+                this.ui.search.value = ''; this.selectedIdx = -1;
                 this.render();
-            }
-            setPlaylist(name) { this.currentPlaylist = name; document.getElementById('search-box-fm').value = ''; this.renderPlaylists(); this.filter(); }
-            renderPlaylists() {
-                const nav = document.getElementById('playlist-nav-fm');
-                nav.innerHTML = Array.from(this.playlists).map(p => {
-                    let icon = p === 'All Tracks' ? '📂' : (p === 'Local Drop' ? '📁' : '☁️');
-                    const activeClass = this.currentPlaylist === p ? 'text-cyan-400 bg-white/5 border-l-2 border-cyan-400' : 'text-gray-400 hover:text-white border-l-2 border-transparent';
-                    return `<button class="text-left text-[12px] p-2 ${activeClass} mb-1 truncate transition-all duration-200" onclick="libFM.setPlaylist('${p}')">${icon} ${p}</button>`;
-                }).join('');
-            }
+            },
+
+            filter(q) {
+                let query = q.toLowerCase();
+                let all = this.db['Root'] || []; // 简化搜索范围
+                this.currentList = all.filter(t => t.t.toLowerCase().includes(query));
+                this.render();
+            },
+
             render() {
-                const container = document.getElementById('track-list-container-fm');
-                if(!container) return;
-                container.innerHTML = this.filtered.map((t, i) => `
-                <div class="track-row-fm ${i === this.selectedIndex ? 'bg-gray-800' : ''}" onclick="libFM.select(${i})" ondblclick="engine.autoLoadTrack(${i})">
-                    <div class="text-gray-500">${i+1}</div>
-                    <div class="text-gray-200 font-bold truncate" title="${t.title}">${t.title}</div>
-                    <div class="text-gray-500 truncate">${t.artist || 'Unknown'}</div>
-                    <div class="text-gray-400">${t.bpm}</div>
-                    <div class="flex gap-1 justify-end">
-                        <button onclick="event.stopPropagation(); libFM.select(${i}); engine.loadToDeck('A')" class="bg-cyan-900/30 border border-cyan-500 text-cyan-400 text-[10px] px-2 py-1 rounded hover:bg-cyan-500 hover:text-black transition">A</button>
-                        <button onclick="event.stopPropagation(); libFM.select(${i}); engine.loadToDeck('B')" class="bg-pink-900/30 border border-pink-500 text-pink-400 text-[10px] px-2 py-1 rounded hover:bg-pink-500 hover:text-black transition">B</button>
-                    </div>
-                </div>`).join('');
-            }
-            select(index) { this.selectedIndex = index; this.render(); }
-            getSelected() { return this.filtered[this.selectedIndex]; }
-            getNextTrack() { if(this.filtered.length===0) return null; this.selectedIndex = (this.selectedIndex + 1) % this.filtered.length; this.render(); return this.getSelected(); }
-            getPrevTrack() { if(this.filtered.length===0) return null; this.selectedIndex = (this.selectedIndex - 1 + this.filtered.length) % this.filtered.length; this.render(); return this.getSelected(); }
-        }
-        window.libFM = new LibraryFM(); // 挂载到全局供给 DataManager 调用
-
-        class DeckFM {
-            constructor(id) {
-                this.id = id; this.audio = document.getElementById(`audio-${id}`); this.audio.preservesPitch = false; 
-                this.ui = {
-                    container: document.getElementById(`deck-${id.toLowerCase()}-ui`),
-                    title: document.querySelector(`#deck-${id.toLowerCase()}-ui .deck-title`),
-                    time: document.querySelector(`#deck-${id.toLowerCase()}-ui .deck-time`),
-                    bpm: document.querySelector(`#deck-${id.toLowerCase()}-ui .deck-bpm`),
-                    cover: document.querySelector(`#deck-${id.toLowerCase()}-ui .cover-img-fm`),
-                    jogMarker: document.querySelector(`#deck-${id.toLowerCase()}-ui .jog-marker-fm`),
-                    btnPlay: document.querySelector(`.btn-play[data-deck="${id}"]`),
-                    canvas: document.querySelector(`#deck-${id.toLowerCase()}-ui .deck-canvas`),
-                    modeTxt: document.querySelector(`#deck-${id.toLowerCase()}-ui .deck-mode`),
-                };
-                this.state = { loaded: false, playing: false, bpm: 120, baseBpm: 120, pitch: 1.0, duration: 0, cuePoint: 0, hotcues: [null, null, null, null], loop: { active: false, in: null, out: null } };
-                this.currentTrackInfo = null; this.source = null; this.gainNode = null; this.eqLow = null; this.eqMid = null; this.eqHigh = null; this.filterNode = null; this.analyser = null;
-                this.setupAudioEvents(); this.setupUIEvents(); this.drawCanvas = this.drawCanvas.bind(this);
-            }
-            initAudioNodes(masterGain) {
-                this.source = audioCtxFM.createMediaElementSource(this.audio); this.gainNode = audioCtxFM.createGain();
-                this.eqHigh = audioCtxFM.createBiquadFilter(); this.eqHigh.type = "highshelf"; this.eqHigh.frequency.value = 3200;
-                this.eqMid = audioCtxFM.createBiquadFilter(); this.eqMid.type = "peaking"; this.eqMid.frequency.value = 1000; this.eqMid.Q.value = 1;
-                this.eqLow = audioCtxFM.createBiquadFilter(); this.eqLow.type = "lowshelf"; this.eqLow.frequency.value = 320;
-                this.filterNode = audioCtxFM.createBiquadFilter(); this.filterNode.type = "lowpass"; this.filterNode.frequency.value = 20000;
-                this.analyser = audioCtxFM.createAnalyser(); this.analyser.fftSize = 256;
-                this.source.connect(this.eqHigh); this.eqHigh.connect(this.eqMid); this.eqMid.connect(this.eqLow);
-                this.eqLow.connect(this.filterNode); this.filterNode.connect(this.gainNode); this.gainNode.connect(this.analyser);
-                this.analyser.connect(masterGain);
-                requestAnimationFrame(this.drawCanvas);
-            }
-            loadTrack(track) {
-                if(this.state.playing) this.pause();
-                this.ui.modeTxt.innerText = "LOADING..."; this.currentTrackInfo = track; engine.setMediaSessionActiveDeck(this.id, track); 
-                this.audio.src = track.blob ? URL.createObjectURL(track.blob) : track.url; this.audio.load(); 
-                this.ui.title.innerText = track.title; this.state.baseBpm = parseFloat(track.bpm); this.state.bpm = this.state.baseBpm * this.state.pitch;
-                this.ui.bpm.innerText = this.state.bpm.toFixed(2); this.ui.cover.style.backgroundImage = track.cover ? `url(${track.cover})` : 'none';
-                this.state.loaded = true; this.state.cuePoint = 0;
-                this.audio.oncanplay = () => { this.ui.modeTxt.innerText = "READY"; };
-            }
-            play() { 
-                if(!this.state.loaded || appMode !== 'full') return; 
-                if (audioCtxFM && audioCtxFM.state === 'suspended') audioCtxFM.resume();
-                let playPromise = this.audio.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        this.state.playing = true; this.ui.btnPlay.classList.add('active'); this.ui.modeTxt.innerText = "PLAYING"; 
-                        engine.setMediaSessionActiveDeck(this.id, this.currentTrackInfo);
-                        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-                    }).catch(e => console.error("Playback prevented:", e));
-                }
-            }
-            pause() { 
-                this.audio.pause(); this.state.playing = false; this.ui.btnPlay.classList.remove('active'); this.ui.modeTxt.innerText = "PAUSED"; 
-                const otherDeck = engine[this.id === 'A' ? 'deckB' : 'deckA'];
-                if ('mediaSession' in navigator && (!otherDeck || !otherDeck.state.playing)) navigator.mediaSession.playbackState = 'paused';
-            }
-            togglePlay() { this.state.playing ? this.pause() : this.play(); }
-            cue() {
-                if(!this.state.loaded) return;
-                if(this.state.playing) { this.pause(); this.audio.currentTime = this.state.cuePoint; } 
-                else { this.state.cuePoint = this.audio.currentTime; this.play(); }
-            }
-            setPitch(val) {
-                let p = 0.92 + (val * 0.16); this.state.pitch = p; this.audio.playbackRate = p;
-                this.state.bpm = this.state.baseBpm * p; this.ui.bpm.innerText = this.state.bpm.toFixed(2);
-            }
-            setParam(type, val) { 
-                if(!this.gainNode) return;
-                if(type === 'volume') this.gainNode.gain.value = val;
-                if(type === 'gain') this.gainNode.gain.value = val * 2; 
-                if(type === 'low') this.eqLow.gain.value = (val - 0.5) * 40; 
-                if(type === 'mid') this.eqMid.gain.value = (val - 0.5) * 40;
-                if(type === 'high') this.eqHigh.gain.value = (val - 0.5) * 40;
-                if(type === 'filter') {
-                    if (val < 0.5) { this.filterNode.type = "lowpass"; this.filterNode.frequency.value = 200 + (val * 2) * 19800; } 
-                    else { this.filterNode.type = "highpass"; this.filterNode.frequency.value = 20 + ((val - 0.5) * 2) * 10000; }
-                    if(val > 0.45 && val < 0.55) { this.filterNode.type = "lowpass"; this.filterNode.frequency.value = 20000; }
-                }
-            }
-            setupAudioEvents() {
-                this.audio.addEventListener('timeupdate', () => {
-                    let cur = this.audio.currentTime;
-                    if(this.state.loop.active && this.state.loop.out && cur >= this.state.loop.out) { this.audio.currentTime = this.state.loop.in; }
-                    if (appMode !== 'full' || document.hidden) return;
-                    let m = Math.floor(cur/60).toString().padStart(2,'0'), s = Math.floor(cur%60).toString().padStart(2,'0'), ms = Math.floor((cur%1)*100).toString().padStart(2,'0');
-                    this.ui.time.innerText = `${m}:${s}:${ms}`;
-                    let r = (cur * 33.33) % 360; 
-                    this.ui.jogMarker.style.transform = `translateX(-50%) rotate(${r}deg)`;
-                    this.ui.jogMarker.style.transformOrigin = "bottom center"; this.ui.jogMarker.style.height = "130px"; 
-                });
-                this.audio.addEventListener('ended', () => { this.pause(); });
-            }
-            setupUIEvents() {
-                this.ui.container.querySelectorAll('.btn-hotcue').forEach(btn => {
-                    btn.addEventListener('mousedown', () => {
-                        let idx = parseInt(btn.dataset.idx);
-                        if(this.state.hotcues[idx] === null) { this.state.hotcues[idx] = this.audio.currentTime; btn.style.opacity = '1'; btn.classList.add('active'); } 
-                        else { this.audio.currentTime = this.state.hotcues[idx]; if(!this.state.playing) this.play(); btn.classList.add('active'); setTimeout(() => btn.classList.remove('active'), 100); }
+                this.ui.list.innerHTML = this.currentList.map((t, i) => `
+                    <tr class="border-b border-gray-800 hover:bg-gray-800 cursor-pointer ${i===this.selectedIdx ? 'bg-gray-800' : ''}" onclick="lib.select(${i})">
+                        <td class="p-2 text-gray-500">${i+1}</td>
+                        <td class="p-2 font-bold truncate max-w-[120px]">${t.t}</td>
+                        <td class="p-2 text-gray-400 truncate max-w-[80px]">${t.a}</td>
+                        <td class="p-2 flex gap-1">
+                            <button onclick="event.stopPropagation(); lib.loadTo('A', ${i})" class="px-2 py-0.5 bg-cyan-900 border border-cyan-500 text-cyan-400 rounded text-[9px] font-bold">A</button>
+                            <button onclick="event.stopPropagation(); lib.loadTo('B', ${i})" class="px-2 py-0.5 bg-pink-900 border border-pink-500 text-pink-400 rounded text-[9px] font-bold">B</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+            
+            select(i) { this.selectedIdx = i; this.render(); },
+            loadTo(deckId, i) { sys[`deck${deckId}`].load(this.currentList[i]); },
+            
+            setupDragDrop() {
+                const dz = document.getElementById('lib-dropzone');
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eName => document.body.addEventListener(eName, e => { e.preventDefault(); e.stopPropagation(); }));
+                document.body.addEventListener('drop', e => {
+                    [...e.dataTransfer.files].forEach(file => {
+                        if(file.type.match('audio.*')) {
+                            jsmediatags.read(file, {
+                                onSuccess: (tag) => {
+                                    let cover = null;
+                                    if(tag.tags.picture) {
+                                        let b64 = ""; for(let i=0; i<tag.tags.picture.data.length; i++) b64 += String.fromCharCode(tag.tags.picture.data[i]);
+                                        cover = `data:${tag.tags.picture.format};base64,${window.btoa(b64)}`;
+                                    }
+                                    if(!this.db['Local Drop']) { this.db['Local Drop'] = []; this.renderTree(); }
+                                    this.db['Local Drop'].push({ t: tag.tags.title || file.name.replace(/\.[^/.]+$/, ""), a: tag.tags.artist || 'Local', bpm: (120+Math.random()*10).toFixed(1), blob: file, cover: cover });
+                                    this.setPlaylist('Local Drop');
+                                },
+                                onError: () => {
+                                    if(!this.db['Local Drop']) { this.db['Local Drop'] = []; this.renderTree(); }
+                                    this.db['Local Drop'].push({ t: file.name, a: 'Local', bpm: '128.0', blob: file });
+                                    this.setPlaylist('Local Drop');
+                                }
+                            });
+                        }
                     });
                 });
-                let wrap = this.ui.container.querySelector('.vinyl-wrap-fm'); let isDragging = false, lastY = 0;
-                wrap.addEventListener('mousedown', e => { isDragging = true; lastY = e.clientY; this.audio.pause(); });
-                window.addEventListener('mouseup', () => { if(isDragging && this.state.playing) this.audio.play(); isDragging = false; });
-                window.addEventListener('mousemove', e => {
-                    if(!isDragging || !this.state.loaded) return; let delta = lastY - e.clientY; lastY = e.clientY;
-                    this.audio.currentTime = Math.max(0, this.audio.currentTime + (delta * 0.05)); 
-                });
-            }
-            drawCanvas() {
-                requestAnimationFrame(this.drawCanvas);
-                if (appMode !== 'full' || document.hidden || !this.analyser) return;
-                const ctx = this.ui.canvas.getContext('2d'); const w = this.ui.canvas.width = this.ui.canvas.clientWidth, h = this.ui.canvas.height = this.ui.canvas.clientHeight;
-                const dataArray = new Uint8Array(this.analyser.frequencyBinCount); this.analyser.getByteFrequencyData(dataArray); ctx.clearRect(0, 0, w, h);
-                const barWidth = (w / dataArray.length) * 2.5; let x = 0;
-                for(let i = 0; i < dataArray.length; i++) {
-                    const barHeight = (dataArray[i] / 255) * h; ctx.fillStyle = this.id === 'A' ? `rgba(0, 242, 255, ${barHeight/h})` : `rgba(255, 0, 234, ${barHeight/h})`;
-                    ctx.fillRect(x, h - barHeight, barWidth, barHeight); x += barWidth + 1;
-                }
-            }
-        }
-
-        const engine = {
-            deckA: new DeckFM('A'), deckB: new DeckFM('B'), masterGain: null, crossfader: 0.5, activeMediaDeckId: 'A', 
-            init() {
-                audioCtxFM = new (window.AudioContext || window.webkitAudioContext)();
-                this.masterGain = audioCtxFM.createGain(); this.masterGain.connect(audioCtxFM.destination);
-                this.deckA.initAudioNodes(this.masterGain); this.deckB.initAudioNodes(this.masterGain);
-                this.setupInteraction(); this.updateCrossfader(); this.startVUMeter(); this.setupMediaSessionAPI(); 
-            },
-            setupMediaSessionAPI() {
-                if ('mediaSession' in navigator) {
-                    navigator.mediaSession.setActionHandler('play', () => { if(appMode==='full') this.getActiveMediaDeck().play(); });
-                    navigator.mediaSession.setActionHandler('pause', () => { if(appMode==='full') this.getActiveMediaDeck().pause(); });
-                    navigator.mediaSession.setActionHandler('nexttrack', () => {
-                        if(appMode!=='full') return;
-                        const nextTrack = window.libFM.getNextTrack();
-                        if (nextTrack) { const deck = this.getActiveMediaDeck(); deck.loadTrack(nextTrack); deck.play(); }
-                    });
-                    navigator.mediaSession.setActionHandler('previoustrack', () => {
-                        if(appMode!=='full') return;
-                        const prevTrack = window.libFM.getPrevTrack();
-                        if (prevTrack) { const deck = this.getActiveMediaDeck(); deck.loadTrack(prevTrack); deck.play(); }
-                    });
-                }
-            },
-            setMediaSessionActiveDeck(deckId, trackInfo) {
-                this.activeMediaDeckId = deckId;
-                if ('mediaSession' in navigator && trackInfo && appMode === 'full') {
-                    navigator.mediaSession.metadata = new MediaMetadata({ title: trackInfo.title || 'Unknown Track', artist: trackInfo.artist || `Deck ${deckId} (Full)`, artwork: [ { src: trackInfo.cover || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMTExIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZpbGw9IiMwMGYyZmYiIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iNDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5WT0lEIERKPC90ZXh0Pjwvc3ZnPg==', sizes: '512x512', type: trackInfo.cover ? 'image/jpeg' : 'image/svg+xml' } ] });
-                }
-            },
-            getActiveMediaDeck() { return this.activeMediaDeckId === 'A' ? this.deckA : this.deckB; },
-            loadToDeck(deckId, explicitTrack = null) {
-                const track = explicitTrack || window.libFM.getSelected(); if(!track) return;
-                if(deckId === 'A') this.deckA.loadTrack(track); else this.deckB.loadTrack(track);
-            },
-            autoLoadTrack(index) {
-                window.libFM.select(index);
-                if (!this.deckA.state.playing) { this.loadToDeck('A'); } else if (!this.deckB.state.playing) { this.loadToDeck('B'); } else { this.loadToDeck('A'); }
-            },
-            updateCrossfader() {
-                if(!this.deckA.gainNode) return; let val = this.crossfader;
-                this.deckA.gainNode.gain.value = Math.cos(val * 0.5 * Math.PI); this.deckB.gainNode.gain.value = Math.cos((1.0 - val) * 0.5 * Math.PI);
-            },
-            startVUMeter() {
-                const drawVU = () => {
-                    requestAnimationFrame(drawVU);
-                    if(appMode !== 'full' || document.hidden || !this.deckA.analyser) return;
-                    let dataA = new Uint8Array(this.deckA.analyser.frequencyBinCount); let dataB = new Uint8Array(this.deckB.analyser.frequencyBinCount);
-                    this.deckA.analyser.getByteFrequencyData(dataA); this.deckB.analyser.getByteFrequencyData(dataB);
-                    let maxA = Math.max(...dataA) / 255, maxB = Math.max(...dataB) / 255;
-                    let master = Math.max(maxA, maxB) * this.masterGain.gain.value;
-                    document.getElementById('vu-l').style.height = (master * 100) + '%'; document.getElementById('vu-r').style.height = (master * 100 * 0.95) + '%'; 
-                };
-                drawVU();
-            },
-            setupInteraction() {
-                const makeDraggable = (selector, type, callback) => {
-                    document.querySelectorAll(selector).forEach(el => {
-                        let isDragging = false, startY = 0, currentVal = type === 'knob' ? 0.5 : (type === 'crossfader' ? 0.5 : 0.8);
-                        const updateVisual = (val) => {
-                            if(type === 'knob') { let deg = (val - 0.5) * 270; el.querySelector('.knob-physical-fm').style.transform = `rotate(${deg}deg)`; } 
-                            else { let handle = el.querySelector('.fader-handle-fm'); if(type === 'crossfader') handle.style.left = (val * 100) + '%'; else handle.style.bottom = (val * 100) + '%'; }
-                        };
-                        updateVisual(currentVal);
-                        const start = (e) => { isDragging = true; startY = e.clientY || e.touches[0].clientY; e.preventDefault(); };
-                        const move = (e) => {
-                            if(!isDragging) return;
-                            let y = e.clientY || (e.touches ? e.touches[0].clientY : startY), delta = (startY - y) * 0.005; 
-                            if(type === 'crossfader') delta = (e.clientX - el.getBoundingClientRect().left) / el.offsetWidth - currentVal;
-                            currentVal = Math.max(0, Math.min(1, currentVal + (type==='crossfader' ? delta : delta)));
-                            if(type !== 'crossfader') startY = y;
-                            updateVisual(currentVal); callback(el, currentVal); 
-                        };
-                        const end = () => isDragging = false;
-                        el.addEventListener('mousedown', start); el.addEventListener('touchstart', start, {passive: false});
-                        window.addEventListener('mousemove', move); window.addEventListener('touchmove', move, {passive: false});
-                        window.addEventListener('mouseup', end); window.addEventListener('touchend', end);
-                    });
-                };
-                makeDraggable('.knob-container-fm', 'knob', (el, val) => { let d = el.dataset.deck, p = el.dataset.param; if(d === 'M' && p === 'master') this.masterGain.gain.value = val * 2; else if(d === 'A') this.deckA.setParam(p, val); else if(d === 'B') this.deckB.setParam(p, val); });
-                makeDraggable('.fader-track-fm[data-type="volume"]', 'fader', (el, val) => { let d = el.dataset.deck; if(d === 'A') this.deckA.setParam('volume', val); if(d === 'B') this.deckB.setParam('volume', val); });
-                makeDraggable('.fader-track-fm[data-type="pitch"]', 'fader', (el, val) => { let d = el.dataset.deck; if(d === 'A') this.deckA.setPitch(1 - val); if(d === 'B') this.deckB.setPitch(1 - val); });
-                makeDraggable('.fader-track-fm.crossfader', 'crossfader', (el, val) => { this.crossfader = val; this.updateCrossfader(); });
-                
-                document.querySelectorAll('.btn-play').forEach(btn => { btn.addEventListener('click', () => { btn.dataset.deck === 'A' ? this.deckA.togglePlay() : this.deckB.togglePlay(); }); });
-                document.querySelectorAll('.btn-cue').forEach(btn => { btn.addEventListener('mousedown', () => { btn.dataset.deck === 'A' ? this.deckA.cue() : this.deckB.cue(); }); });
-                document.querySelectorAll('.btn-pitch-bend').forEach(btn => {
-                    btn.addEventListener('mousedown', () => { let d = btn.dataset.deck === 'A' ? this.deckA : this.deckB; d.audio.playbackRate = d.state.pitch + (btn.dataset.dir === '+' ? 1 : -1) * 0.05; });
-                    btn.addEventListener('mouseup', () => { let d = btn.dataset.deck === 'A' ? this.deckA : this.deckB; d.audio.playbackRate = d.state.pitch; });
-                });
-                document.getElementById('search-box-fm').addEventListener('input', e => window.libFM.filter(e.target.value));
             }
         };
 
-        const dropZone = document.getElementById('library-area-fm');
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { document.body.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
-        document.body.addEventListener('dragenter', () => { if(appMode==='full') dropZone.classList.add('drop-active'); });
-        document.body.addEventListener('dragleave', (e) => { if(e.clientY <= 0 || e.clientX <= 0 || (e.clientX >= window.innerWidth || e.clientY >= window.innerHeight)) dropZone.classList.remove('drop-active'); });
-        document.body.addEventListener('drop', (e) => {
-            if(appMode !== 'full') return;
-            dropZone.classList.remove('drop-active');
-            [...e.dataTransfer.files].forEach(file => {
-                if(file.type.match('audio.*')) {
-                    jsmediatags.read(file, {
-                        onSuccess: function(tag) {
-                            let coverStr = null;
-                            if(tag.tags.picture) { let base64String = ""; for (let i = 0; i < tag.tags.picture.data.length; i++) base64String += String.fromCharCode(tag.tags.picture.data[i]); coverStr = `data:${tag.tags.picture.format};base64,${window.btoa(base64String)}`; }
-                            window.libFM.addTrack({ title: tag.tags.title || file.name.replace(/\.[^/.]+$/, ""), artist: tag.tags.artist || 'Local Import', blob: file, cover: coverStr, playlist: 'Local Drop' });
-                        },
-                        onError: function() { window.libFM.addTrack({ title: file.name, artist: 'Local File', blob: file, playlist: 'Local Drop' }); }
-                    });
-                }
-            });
-            window.libFM.setPlaylist('Local Drop');
-        });
-        
+        setInterval(() => {
+            document.getElementById('sys-cpu').innerText = (powerMode === 'ECO' ? Math.random()*5 + 2 : Math.random()*15 + 10).toFixed(1) + '%';
+        }, 2000);
     </script>
 </body>
 </html>
