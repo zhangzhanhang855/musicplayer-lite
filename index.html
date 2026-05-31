@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Void Engine Pro Mk-VIII | iPad Optimized</title>
+    <title>Void Engine Pro Mk-VIII | Fullscreen Library</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -23,39 +23,55 @@
         body { 
             background: var(--bg-dark); color: #e0e0e0; font-family: 'Inter', sans-serif; 
             margin: 0; padding: 0; 
-            height: 100dvh; /* 适配 iOS Safari 视口 */
-            width: 100vw;
+            height: 100dvh; width: 100vw;
             overflow: hidden; 
             display: flex; flex-direction: column;
         }
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 
         /* =========================================
-           iPad 横屏为主的经典 DJ 布局 (Grid)
+           全局网格布局 (释放底部空间给 Deck/Mixer)
            ========================================= */
         #app-container {
-            flex: 1; display: grid; 
-            grid-template-columns: 1fr 260px 1fr; /* 左右 Deck，中间 Mixer */
-            grid-template-rows: 50px 1fr 240px;   /* 顶栏，打碟区，底部曲库 */
+            flex: 1; display: grid; position: relative;
+            grid-template-columns: 1fr 280px 1fr; /* Mixer稍微加宽 */
+            grid-template-rows: 50px 1fr 40px;    /* 释放出的1fr给打碟区，底部40px留给触发栏 */
             grid-template-areas: 
                 "header header header"
                 "deck-a mixer deck-b"
-                "lib lib lib";
+                "footer footer footer";
             gap: 2px; background: #000; padding: 2px;
             opacity: 0; transition: opacity 1s;
         }
 
-        .area-header { grid-area: header; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); }
+        .area-header { grid-area: header; background: var(--panel-bg); border-bottom: 1px solid var(--panel-border); z-index: 20; }
         .area-deck-a { grid-area: deck-a; background: var(--panel-bg); display: flex; flex-direction: column; border-top: 3px solid var(--neon-a); }
         .area-deck-b { grid-area: deck-b; background: var(--panel-bg); display: flex; flex-direction: column; border-top: 3px solid var(--neon-b); }
         .area-mixer { grid-area: mixer; background: #0a0a0c; border-left: 1px solid #000; border-right: 1px solid #000; display: flex; flex-direction: column; border-top: 3px solid var(--neon-mix); }
-        .area-lib { grid-area: lib; background: var(--panel-bg); border-top: 1px solid var(--panel-border); display: flex; } /* 改为横向 Flex 拆分侧边栏和列表 */
+        .area-footer { grid-area: footer; background: #050505; display: flex; align-items: center; justify-content: center; z-index: 20; border-top: 1px solid var(--panel-border); }
 
         /* =========================================
-           LCD 与 控件 UI
+           全屏曲库遮罩 (Drawer Modal)
+           ========================================= */
+        .area-lib { 
+            position: absolute; 
+            top: 50px; bottom: 40px; left: 0; right: 0;
+            z-index: 50; 
+            background: rgba(10, 10, 13, 0.92);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-top: 2px solid var(--neon-mix);
+            display: flex; flex-direction: row;
+            transform: translateY(120%);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+        }
+        .area-lib.open { transform: translateY(0); }
+
+        /* =========================================
+           LCD 与 硬件控件 UI
            ========================================= */
         .lcd-screen {
             background: var(--lcd-bg); border: 2px solid #000; border-radius: 4px;
@@ -72,14 +88,14 @@
         .hardware-panel { background: var(--metal-grad); box-shadow: inset 0 1px 1px rgba(255,255,255,0.05); }
         
         .knob-wrapper { display: flex; flex-direction: column; align-items: center; position: relative; margin: 4px 0; touch-action: none; }
-        .knob-label { font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 700; color: #778; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 1px; }
+        .knob-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700; color: #778; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 1px; }
         .knob-base { border-radius: 50%; background: #050505; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; }
         .knob-physical { border-radius: 50%; position: absolute; background: conic-gradient(from 180deg at 50% 50%, #333 0deg, #555 45deg, #222 90deg, #444 135deg, #111 180deg, #444 225deg, #222 270deg, #555 315deg, #333 360deg); border: 2px solid #111; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
         .knob-indicator { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: 3px; height: 30%; background: #fff; border-radius: 2px; box-shadow: 0 0 4px #fff; }
         
-        .knob-eq .knob-base { width: 50px; height: 50px; } .knob-eq .knob-physical { width: 40px; height: 40px; }
-        .knob-filter .knob-base { width: 58px; height: 58px; } .knob-filter .knob-physical { width: 46px; height: 46px; }
-        .knob-trim .knob-base { width: 40px; height: 40px; } .knob-trim .knob-physical { width: 30px; height: 30px; }
+        .knob-eq .knob-base { width: 56px; height: 56px; } .knob-eq .knob-physical { width: 44px; height: 44px; }
+        .knob-filter .knob-base { width: 66px; height: 66px; } .knob-filter .knob-physical { width: 54px; height: 54px; }
+        .knob-trim .knob-base { width: 46px; height: 46px; } .knob-trim .knob-physical { width: 36px; height: 36px; }
         .knob-indicator.ind-a { background: var(--neon-a); box-shadow: 0 0 6px var(--neon-a); }
         .knob-indicator.ind-b { background: var(--neon-b); box-shadow: 0 0 6px var(--neon-b); }
         .knob-indicator.ind-mix { background: var(--neon-mix); box-shadow: 0 0 6px var(--neon-mix); }
@@ -87,62 +103,75 @@
         .fader-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; touch-action: none; }
         .fader-track { width: 10px; background: #000; border-radius: 5px; position: relative; box-shadow: inset 0 2px 10px rgba(0,0,0,1), 0 1px 0 rgba(255,255,255,0.1); border: 1px solid #1a1a1a; }
         .fader-track::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 2px; height: 100%; background: #222; }
-        .fader-track.vol { height: 180px; margin: 15px 0; }
-        .fader-track.pitch { height: 200px; margin: 15px 0; }
-        .fader-track.cross { width: 200px; height: 12px; margin: 15px 0; }
+        /* 放大了推子的尺寸 */
+        .fader-track.vol { height: 260px; margin: 20px 0; }
+        .fader-track.pitch { height: 280px; margin: 15px 0; }
+        .fader-track.cross { width: 220px; height: 12px; margin: 0; }
         .fader-track.cross::before { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
         
-        .fader-handle { width: 36px; height: 46px; background: linear-gradient(to bottom, #444, #1a1a1a); position: absolute; left: 50%; transform: translateX(-50%); bottom: 50%; border-radius: 4px; border: 1px solid #000; border-top: 1px solid #666; box-shadow: 0 10px 20px rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; pointer-events: none; }
-        .fader-track.cross .fader-handle { width: 44px; height: 32px; left: 50%; bottom: auto; top: 50%; transform: translate(-50%, -50%); }
+        .fader-handle { width: 40px; height: 50px; background: linear-gradient(to bottom, #444, #1a1a1a); position: absolute; left: 50%; transform: translateX(-50%); bottom: 50%; border-radius: 4px; border: 1px solid #000; border-top: 1px solid #666; box-shadow: 0 10px 20px rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; pointer-events: none; }
+        .fader-track.cross .fader-handle { width: 50px; height: 36px; left: 50%; bottom: auto; top: 50%; transform: translate(-50%, -50%); }
         .fader-handle::after { content: ''; width: 70%; height: 3px; background: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.5); }
         .fader-handle.handle-a::after { background: var(--neon-a); box-shadow: 0 0 8px var(--neon-a); }
         .fader-handle.handle-b::after { background: var(--neon-b); box-shadow: 0 0 8px var(--neon-b); }
 
-        .btn-hw { background: linear-gradient(180deg, #2a2a30 0%, #151518 100%); border: 1px solid #000; border-top: 1px solid #445; border-radius: 4px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; box-shadow: 0 4px 8px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; transition: 0.1s; touch-action: manipulation; }
-        .btn-hw:active, .btn-hw.active { background: #111; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); transform: translateY(2px); }
+        .btn-hw { background: linear-gradient(180deg, #2a2a30 0%, #151518 100%); border: 1px solid #000; border-top: 1px solid #445; border-radius: 4px; color: #aaa; font-family: 'Rajdhani', sans-serif; font-weight: 700; box-shadow: 0 4px 8px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; overflow: hidden; transition: 0.1s; touch-action: manipulation; cursor: pointer; }
+        .btn-hw:active, .btn-hw.active { background: #111; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); transform: translateY(2px); border-top-color: #000; }
         .btn-hw.active.glow-a { color: var(--neon-a); text-shadow: 0 0 10px var(--neon-a); border-color: var(--neon-a-dim); box-shadow: inset 0 0 15px var(--neon-a-dim); }
         .btn-hw.active.glow-b { color: var(--neon-b); text-shadow: 0 0 10px var(--neon-b); border-color: var(--neon-b-dim); box-shadow: inset 0 0 15px var(--neon-b-dim); }
 
-        .pad-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 8px; padding: 10px; background: #0a0a0c; border-radius: 8px; box-shadow: inset 0 0 20px #000; }
-        .pad-hw { background: #1a1a20; height: 44px; border-radius: 4px; border: 1px solid #000; border-bottom: 4px solid #050505; display: flex; align-items: center; justify-content: center; color: #555; font-family: 'Share Tech Mono', monospace; font-size: 11px; font-weight: bold; transition: 0.05s; position: relative; touch-action: none; }
+        .pad-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 10px; padding: 12px; background: #0a0a0c; border-radius: 8px; box-shadow: inset 0 0 20px #000; }
+        .pad-hw { background: #1a1a20; height: 54px; border-radius: 4px; border: 1px solid #000; border-bottom: 4px solid #050505; display: flex; align-items: center; justify-content: center; color: #555; font-family: 'Share Tech Mono', monospace; font-size: 13px; font-weight: bold; transition: 0.05s; position: relative; touch-action: none; cursor: pointer; }
         .pad-hw::before { content: ''; position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 80%; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
-        .pad-hw:active, .pad-hw.active { transform: translateY(4px); border-bottom: 0 solid #000; height: 40px; margin-top: 4px; }
+        .pad-hw:active, .pad-hw.active { transform: translateY(4px); border-bottom: 0 solid #000; height: 50px; margin-top: 4px; }
         .pad-hw.active.pad-a { background: #004444; color: #fff; box-shadow: 0 0 20px var(--neon-a); }
         .pad-hw.active.pad-a::before { background: var(--neon-a); box-shadow: 0 0 10px var(--neon-a); }
         .pad-hw.active.pad-b { background: #440022; color: #fff; box-shadow: 0 0 20px var(--neon-b); }
         .pad-hw.active.pad-b::before { background: var(--neon-b); box-shadow: 0 0 10px var(--neon-b); }
 
-        /* 打碟转盘 */
-        .jog-container { position: relative; flex: 1; min-height: 180px; display: flex; align-items: center; justify-content: center; }
-        .jog-wheel { width: min(240px, 90%); aspect-ratio: 1/1; border-radius: 50%; background: #050505; box-shadow: 0 15px 30px rgba(0,0,0,0.9), inset 0 2px 5px rgba(255,255,255,0.1); position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; }
-        .jog-ring-outer { position: absolute; inset: 0; border-radius: 50%; border: 12px solid #1a1a1a; background: conic-gradient(#111, #222, #111, #222, #111); box-shadow: inset 0 0 15px #000; pointer-events: none; }
-        .jog-platter { width: 86%; height: 86%; border-radius: 50%; background: radial-gradient(circle, #252525 0%, #0a0a0a 60%, #000 100%); border: 3px solid #333; position: relative; box-shadow: inset 0 0 20px #000; }
+        /* 放大的打碟转盘 */
+        .jog-container { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
+        .jog-wheel { width: min(320px, 90%); aspect-ratio: 1/1; border-radius: 50%; background: #050505; box-shadow: 0 15px 30px rgba(0,0,0,0.9), inset 0 2px 5px rgba(255,255,255,0.1); position: relative; display: flex; align-items: center; justify-content: center; touch-action: none; }
+        .jog-ring-outer { position: absolute; inset: 0; border-radius: 50%; border: 15px solid #1a1a1a; background: conic-gradient(#111, #222, #111, #222, #111); box-shadow: inset 0 0 15px #000; pointer-events: none; }
+        .jog-platter { width: 85%; height: 85%; border-radius: 50%; background: radial-gradient(circle, #252525 0%, #0a0a0a 60%, #000 100%); border: 3px solid #333; position: relative; box-shadow: inset 0 0 20px #000; }
         .jog-platter::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, transparent 0, transparent 3px, rgba(255,255,255,0.03) 4px); }
-        .jog-marker { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 4px; height: 25px; background: #fff; border-radius: 2px; box-shadow: 0 0 10px #fff; z-index: 10; transform-origin: bottom center; }
+        .jog-marker { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 4px; height: 30px; background: #fff; border-radius: 2px; box-shadow: 0 0 10px #fff; z-index: 10; transform-origin: bottom center; }
         .jog-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 35%; height: 35%; border-radius: 50%; background: var(--lcd-bg); border: 3px solid #000; box-shadow: inset 0 0 20px rgba(0,0,0,1), 0 0 0 2px #333; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; overflow: hidden; font-family: 'Share Tech Mono', monospace; }
         .jog-cover { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.3; filter: grayscale(50%); mix-blend-mode: luminosity; }
         
-        .vu-meter-vert { width: 10px; height: 100%; background: #000; border-radius: 2px; overflow: hidden; position: relative; border: 1px solid #222; }
+        .vu-meter-vert { width: 12px; height: 100%; background: #000; border-radius: 2px; overflow: hidden; position: relative; border: 1px solid #222; }
         .vu-leds { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column-reverse; gap: 1px; padding: 1px; }
         .vu-led { flex: 1; background: #111; border-radius: 1px; }
         
         #boot-screen { position: fixed; inset: 0; background: #050505; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Share Tech Mono', monospace; color: #0f0; }
-        
-        /* 手机竖屏降级回落布局 */
+
+        /* 曲库内部 UI 优化大字体 */
+        .lib-folder { font-size: 14px; padding: 15px; color: #ccc; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
+        .lib-folder:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .lib-track-row { transition: background 0.2s; }
+        .lib-track-row:hover { background: rgba(255,255,255,0.1); }
+        .lib-track-row.active { background: rgba(0,242,255,0.1); border-left: 3px solid var(--neon-a); }
+
+        /* 手机竖屏排版回落 */
         @media (max-width: 767px) {
             #app-container {
-                display: flex; flex-direction: column; height: auto; min-height: 100dvh; overflow-y: auto; overflow-x: hidden;
+                display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
             }
-            .area-deck-a, .area-deck-b, .area-mixer, .area-lib { border-radius: 8px; margin-bottom: 10px; }
-            .area-lib { flex-direction: column; height: 400px; }
-            .area-lib > div:first-child { width: 100%; height: 120px; border-right: none; border-bottom: 1px solid var(--panel-border); }
+            .area-deck-a, .area-deck-b, .area-mixer { flex-shrink: 0; border-radius: 8px; margin-bottom: 10px; }
+            #main-scroll-area { flex: 1; overflow-y: auto; padding-bottom: 60px; } /* 留出底部栏位置 */
+            .area-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 50px; }
+            .area-lib { flex-direction: column; top: 50px; bottom: 50px; }
+            .area-lib > div:first-child { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid var(--panel-border); }
+            .jog-wheel { width: 220px; }
+            .fader-track.vol { height: 180px; }
+            .fader-track.pitch { height: 200px; }
         }
     </style>
 </head>
 <body>
 
     <div id="boot-screen">
-        <div class="text-4xl font-bold mb-8 text-white tracking-[0.5em] drop-shadow-[0_0_20px_#fff]">VOID ENGINE <span class="text-xl text-red-500">PRO iPad</span></div>
+        <div class="text-4xl font-bold mb-8 text-white tracking-[0.5em] drop-shadow-[0_0_20px_#fff]">VOID ENGINE <span class="text-xl text-red-500">PRO</span></div>
         <div class="w-[600px] max-w-[90vw] h-48 overflow-hidden font-mono text-sm drop-shadow-[0_0_5px_#0f0]" id="term-output"></div>
         <button id="btn-engage" class="mt-8 px-10 py-3 border-2 border-[#0f0] text-[#0f0] font-bold text-lg hover:bg-[#0f0] hover:text-black transition-all hidden shadow-[0_0_20px_#0f0]">ENGAGE SYSTEM</button>
     </div>
@@ -166,199 +195,207 @@
             </div>
         </header>
 
-        <main class="area-deck-a relative">
-            <div class="h-28 p-3 border-b border-gray-800 flex flex-col gap-2">
-                <div class="lcd-screen lcd-glow-a flex-1 p-2 flex flex-col relative">
-                    <div class="flex justify-between items-start z-10 relative">
-                        <div class="w-2/3">
-                            <div class="text-lg font-bold text-white truncate text-glow-a" id="da-title">NO TRACK</div>
-                            <div class="text-[10px] text-cyan-200 mt-0.5 truncate" id="da-artist">--</div>
+        <div id="main-scroll-area" class="md:contents">
+            
+            <main class="area-deck-a relative">
+                <div class="h-32 p-4 border-b border-gray-800 flex flex-col gap-2">
+                    <div class="lcd-screen lcd-glow-a flex-1 p-3 flex flex-col relative">
+                        <div class="flex justify-between items-start z-10 relative">
+                            <div class="w-2/3">
+                                <div class="text-xl font-bold text-white truncate text-glow-a" id="da-title">NO TRACK</div>
+                                <div class="text-[11px] text-cyan-200 mt-1 truncate" id="da-artist">--</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] text-cyan-600">REMAINING</div>
+                                <div class="text-2xl font-black text-cyan-400" id="da-time">-00:00.00</div>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <div class="text-[9px] text-cyan-600">REMAINING</div>
-                            <div class="text-xl font-black text-cyan-400" id="da-time">-00:00.00</div>
+                        <div class="absolute bottom-2 left-3 flex gap-4 z-10">
+                            <div><span class="text-[9px] text-gray-500 block leading-tight">BPM</span><span class="text-base font-bold text-white" id="da-bpm">0.00</span></div>
+                            <div><span class="text-[9px] text-gray-500 block leading-tight">PITCH</span><span class="text-base font-bold text-white" id="da-pitch-val">+0.00%</span></div>
                         </div>
-                    </div>
-                    <div class="absolute bottom-1 left-2 flex gap-3 z-10">
-                        <div><span class="text-[8px] text-gray-500 block leading-tight">BPM</span><span class="text-sm font-bold text-white" id="da-bpm">0.00</span></div>
-                        <div><span class="text-[8px] text-gray-500 block leading-tight">PITCH</span><span class="text-sm font-bold text-white" id="da-pitch-val">+0.00%</span></div>
-                    </div>
-                    <canvas id="canvas-wave-a" class="absolute inset-0 w-full h-full opacity-60"></canvas>
-                </div>
-            </div>
-
-            <div class="flex-1 flex px-3 items-center justify-between">
-                <div class="flex flex-col gap-3 w-16">
-                    <button class="btn-hw h-12 rounded-full text-lg" id="da-btn-play" data-deck="A">▶</button>
-                    <button class="btn-hw h-12 rounded-full text-lg text-cyan-500" id="da-btn-cue" data-deck="A">C</button>
-                    <button class="btn-hw h-8 text-[10px] mt-2" id="da-btn-sync" data-deck="A">SYNC</button>
-                </div>
-                
-                <div class="jog-container">
-                    <div class="jog-wheel" id="da-jog" data-deck="A">
-                        <div class="jog-ring-outer"></div>
-                        <div class="jog-platter"><div class="jog-marker" id="da-jog-marker"></div></div>
-                        <div class="jog-screen">
-                            <div class="jog-cover" id="da-cover"></div>
-                            <span class="text-[10px] text-cyan-500 z-10" id="da-jog-bpm">0.0</span>
-                        </div>
+                        <canvas id="canvas-wave-a" class="absolute inset-0 w-full h-full opacity-60"></canvas>
                     </div>
                 </div>
 
-                <div class="w-12 flex flex-col items-center">
-                    <div class="w-2 h-2 rounded-full bg-[#111] border border-gray-600 mb-1" id="da-pitch-zero"></div>
-                    <div class="fader-wrapper">
-                        <div class="fader-track pitch" id="da-pitch-track" data-deck="A"><div class="fader-handle handle-a" id="da-pitch-handle" style="bottom: 50%;"></div></div>
+                <div class="flex-1 flex px-4 py-2 items-center justify-between">
+                    <div class="flex flex-col gap-4 w-16">
+                        <button class="btn-hw h-14 rounded-full text-xl" id="da-btn-play" data-deck="A">▶</button>
+                        <button class="btn-hw h-14 rounded-full text-xl text-cyan-500" id="da-btn-cue" data-deck="A">C</button>
+                        <button class="btn-hw h-8 text-[11px] mt-2" id="da-btn-sync" data-deck="A">SYNC</button>
                     </div>
-                </div>
-            </div>
-
-            <div class="p-3 pt-0">
-                <div class="pad-grid">
-                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="0">C1</div>
-                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="1">C2</div>
-                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="2">C3</div>
-                    <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="3">C4</div>
-                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="1">1B</div>
-                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="2">2B</div>
-                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="4">4B</div>
-                    <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="8">8B</div>
-                </div>
-            </div>
-        </main>
-
-        <main class="area-mixer hardware-panel">
-            <div class="flex-1 flex">
-                <div class="flex-1 flex flex-col items-center pt-3 border-r border-gray-800">
-                    <div class="text-[10px] font-bold text-gray-500 mb-2">CH A</div>
-                    <div class="knob-wrapper knob-trim" data-deck="A" data-param="gain"><div class="knob-label">TRIM</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
-                    <div class="w-full h-px bg-gray-800 my-1"></div>
-                    <div class="knob-wrapper knob-eq" data-deck="A" data-param="high"><div class="knob-label">HI</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
-                    <div class="knob-wrapper knob-eq" data-deck="A" data-param="mid"><div class="knob-label">MID</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
-                    <div class="knob-wrapper knob-eq" data-deck="A" data-param="low"><div class="knob-label">LOW</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
-                    <div class="w-full h-px bg-gray-800 my-1"></div>
-                    <div class="knob-wrapper knob-filter" data-deck="A" data-param="filter"><div class="knob-label text-cyan-500">FILTER</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
-                    <div class="flex-1 flex items-end pb-2">
-                        <div class="fader-wrapper"><div class="fader-track vol" id="da-vol-track" data-deck="A"><div class="fader-handle handle-a" id="da-vol-handle" style="bottom: 80%;"></div></div></div>
-                    </div>
-                </div>
-
-                <div class="w-16 flex flex-col items-center pt-3 bg-[#050505]">
-                    <div class="text-[10px] font-bold text-gray-500 mb-2">MASTER</div>
-                    <div class="knob-wrapper knob-trim" data-deck="M" data-param="master"><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-mix"></div></div></div></div>
-                    <div class="flex gap-1 bg-black p-1 border border-gray-800 rounded mt-2 flex-1 max-h-[160px]">
-                        <div class="vu-meter-vert"><div class="vu-leds" id="vu-l"></div></div>
-                        <div class="vu-meter-vert"><div class="vu-leds" id="vu-r"></div></div>
-                    </div>
-                </div>
-
-                <div class="flex-1 flex flex-col items-center pt-3 border-l border-gray-800">
-                    <div class="text-[10px] font-bold text-gray-500 mb-2">CH B</div>
-                    <div class="knob-wrapper knob-trim" data-deck="B" data-param="gain"><div class="knob-label">TRIM</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
-                    <div class="w-full h-px bg-gray-800 my-1"></div>
-                    <div class="knob-wrapper knob-eq" data-deck="B" data-param="high"><div class="knob-label">HI</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
-                    <div class="knob-wrapper knob-eq" data-deck="B" data-param="mid"><div class="knob-label">MID</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
-                    <div class="knob-wrapper knob-eq" data-deck="B" data-param="low"><div class="knob-label">LOW</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
-                    <div class="w-full h-px bg-gray-800 my-1"></div>
-                    <div class="knob-wrapper knob-filter" data-deck="B" data-param="filter"><div class="knob-label text-pink-500">FILTER</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
-                    <div class="flex-1 flex items-end pb-2">
-                        <div class="fader-wrapper"><div class="fader-track vol" id="db-vol-track" data-deck="B"><div class="fader-handle handle-b" id="db-vol-handle" style="bottom: 80%;"></div></div></div>
-                    </div>
-                </div>
-            </div>
-            <div class="h-16 border-t border-gray-800 flex items-center justify-center bg-[#070709] shadow-[inset_0_10px_20px_#000]">
-                <div class="text-[10px] text-gray-600 font-bold mr-3">A</div>
-                <div class="fader-wrapper"><div class="fader-track cross" id="cross-track"><div class="fader-handle" id="cross-handle" style="left: 50%;"></div></div></div>
-                <div class="text-[10px] text-gray-600 font-bold ml-3">B</div>
-            </div>
-        </main>
-
-        <main class="area-deck-b relative">
-            <div class="h-28 p-3 border-b border-gray-800 flex flex-col gap-2">
-                <div class="lcd-screen lcd-glow-b flex-1 p-2 flex flex-col relative">
-                    <div class="flex justify-between items-start z-10 relative">
-                        <div class="w-2/3">
-                            <div class="text-lg font-bold text-white truncate text-glow-b" id="db-title">NO TRACK</div>
-                            <div class="text-[10px] text-pink-200 mt-0.5 truncate" id="db-artist">--</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-[9px] text-pink-600">REMAINING</div>
-                            <div class="text-xl font-black text-pink-400" id="db-time">-00:00.00</div>
+                    
+                    <div class="jog-container">
+                        <div class="jog-wheel" id="da-jog" data-deck="A">
+                            <div class="jog-ring-outer"></div>
+                            <div class="jog-platter"><div class="jog-marker" id="da-jog-marker"></div></div>
+                            <div class="jog-screen">
+                                <div class="jog-cover" id="da-cover"></div>
+                                <span class="text-xs text-cyan-500 z-10 font-bold" id="da-jog-bpm">0.0</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="absolute bottom-1 left-2 flex gap-3 z-10">
-                        <div><span class="text-[8px] text-gray-500 block leading-tight">BPM</span><span class="text-sm font-bold text-white" id="db-bpm">0.00</span></div>
-                        <div><span class="text-[8px] text-gray-500 block leading-tight">PITCH</span><span class="text-sm font-bold text-white" id="db-pitch-val">+0.00%</span></div>
-                    </div>
-                    <canvas id="canvas-wave-b" class="absolute inset-0 w-full h-full opacity-60"></canvas>
-                </div>
-            </div>
 
-            <div class="flex-1 flex px-3 items-center justify-between flex-row-reverse">
-                <div class="flex flex-col gap-3 w-16">
-                    <button class="btn-hw h-12 rounded-full text-lg" id="db-btn-play" data-deck="B">▶</button>
-                    <button class="btn-hw h-12 rounded-full text-lg text-pink-500" id="db-btn-cue" data-deck="B">C</button>
-                    <button class="btn-hw h-8 text-[10px] mt-2" id="db-btn-sync" data-deck="B">SYNC</button>
-                </div>
-                
-                <div class="jog-container">
-                    <div class="jog-wheel" id="db-jog" data-deck="B">
-                        <div class="jog-ring-outer"></div>
-                        <div class="jog-platter"><div class="jog-marker" id="db-jog-marker"></div></div>
-                        <div class="jog-screen">
-                            <div class="jog-cover" id="db-cover"></div>
-                            <span class="text-[10px] text-pink-500 z-10" id="db-jog-bpm">0.0</span>
+                    <div class="w-14 flex flex-col items-center">
+                        <div class="w-2 h-2 rounded-full bg-[#111] border border-gray-600 mb-2" id="da-pitch-zero"></div>
+                        <div class="fader-wrapper">
+                            <div class="fader-track pitch" id="da-pitch-track" data-deck="A"><div class="fader-handle handle-a" id="da-pitch-handle" style="bottom: 50%;"></div></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="w-12 flex flex-col items-center">
-                    <div class="w-2 h-2 rounded-full bg-[#111] border border-gray-600 mb-1" id="db-pitch-zero"></div>
-                    <div class="fader-wrapper">
-                        <div class="fader-track pitch" id="db-pitch-track" data-deck="B"><div class="fader-handle handle-b" id="db-pitch-handle" style="bottom: 50%;"></div></div>
+                <div class="p-4 pt-0">
+                    <div class="pad-grid">
+                        <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="0">C1</div>
+                        <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="1">C2</div>
+                        <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="2">C3</div>
+                        <div class="pad-hw pad-a btn-hc" data-deck="A" data-idx="3">C4</div>
+                        <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="1">1 B</div>
+                        <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="2">2 B</div>
+                        <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="4">4 B</div>
+                        <div class="pad-hw pad-a text-orange-400 btn-loop" data-deck="A" data-beats="8">8 B</div>
                     </div>
                 </div>
-            </div>
+            </main>
 
-            <div class="p-3 pt-0">
-                <div class="pad-grid">
-                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="0">C1</div>
-                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="1">C2</div>
-                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="2">C3</div>
-                    <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="3">C4</div>
-                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="1">1B</div>
-                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="2">2B</div>
-                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="4">4B</div>
-                    <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="8">8B</div>
+            <main class="area-mixer hardware-panel">
+                <div class="flex-1 flex">
+                    <div class="flex-1 flex flex-col items-center pt-4 border-r border-gray-800">
+                        <div class="text-[11px] font-bold text-gray-500 mb-3">CH A</div>
+                        <div class="knob-wrapper knob-trim" data-deck="A" data-param="gain"><div class="knob-label">TRIM</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                        <div class="w-full h-px bg-gray-800 my-2"></div>
+                        <div class="knob-wrapper knob-eq" data-deck="A" data-param="high"><div class="knob-label">HI</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                        <div class="knob-wrapper knob-eq" data-deck="A" data-param="mid"><div class="knob-label">MID</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                        <div class="knob-wrapper knob-eq" data-deck="A" data-param="low"><div class="knob-label">LOW</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                        <div class="w-full h-px bg-gray-800 my-2"></div>
+                        <div class="knob-wrapper knob-filter" data-deck="A" data-param="filter"><div class="knob-label text-cyan-500">FILTER</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-a"></div></div></div></div>
+                        <div class="flex-1 flex items-end pb-4 mt-2">
+                            <div class="fader-wrapper"><div class="fader-track vol" id="da-vol-track" data-deck="A"><div class="fader-handle handle-a" id="da-vol-handle" style="bottom: 80%;"></div></div></div>
+                        </div>
+                    </div>
+
+                    <div class="w-20 flex flex-col items-center pt-4 bg-[#050505]">
+                        <div class="text-[11px] font-bold text-gray-500 mb-3">MASTER</div>
+                        <div class="knob-wrapper knob-trim" data-deck="M" data-param="master"><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-mix"></div></div></div></div>
+                        <div class="flex gap-[2px] bg-black p-1.5 border border-gray-800 rounded mt-4 flex-1 max-h-[220px]">
+                            <div class="vu-meter-vert"><div class="vu-leds" id="vu-l"></div></div>
+                            <div class="vu-meter-vert"><div class="vu-leds" id="vu-r"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col items-center pt-4 border-l border-gray-800">
+                        <div class="text-[11px] font-bold text-gray-500 mb-3">CH B</div>
+                        <div class="knob-wrapper knob-trim" data-deck="B" data-param="gain"><div class="knob-label">TRIM</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                        <div class="w-full h-px bg-gray-800 my-2"></div>
+                        <div class="knob-wrapper knob-eq" data-deck="B" data-param="high"><div class="knob-label">HI</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                        <div class="knob-wrapper knob-eq" data-deck="B" data-param="mid"><div class="knob-label">MID</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                        <div class="knob-wrapper knob-eq" data-deck="B" data-param="low"><div class="knob-label">LOW</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                        <div class="w-full h-px bg-gray-800 my-2"></div>
+                        <div class="knob-wrapper knob-filter" data-deck="B" data-param="filter"><div class="knob-label text-pink-500">FILTER</div><div class="knob-base"><div class="knob-physical"><div class="knob-indicator ind-b"></div></div></div></div>
+                        <div class="flex-1 flex items-end pb-4 mt-2">
+                            <div class="fader-wrapper"><div class="fader-track vol" id="db-vol-track" data-deck="B"><div class="fader-handle handle-b" id="db-vol-handle" style="bottom: 80%;"></div></div></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </main>
+                <div class="h-20 border-t border-gray-800 flex items-center justify-center bg-[#070709] shadow-[inset_0_10px_20px_#000]">
+                    <div class="text-xs text-gray-600 font-bold mr-4">A</div>
+                    <div class="fader-wrapper"><div class="fader-track cross" id="cross-track"><div class="fader-handle" id="cross-handle" style="left: 50%;"></div></div></div>
+                    <div class="text-xs text-gray-600 font-bold ml-4">B</div>
+                </div>
+            </main>
+
+            <main class="area-deck-b relative">
+                <div class="h-32 p-4 border-b border-gray-800 flex flex-col gap-2">
+                    <div class="lcd-screen lcd-glow-b flex-1 p-3 flex flex-col relative">
+                        <div class="flex justify-between items-start z-10 relative">
+                            <div class="w-2/3">
+                                <div class="text-xl font-bold text-white truncate text-glow-b" id="db-title">NO TRACK</div>
+                                <div class="text-[11px] text-pink-200 mt-1 truncate" id="db-artist">--</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[10px] text-pink-600">REMAINING</div>
+                                <div class="text-2xl font-black text-pink-400" id="db-time">-00:00.00</div>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-2 left-3 flex gap-4 z-10">
+                            <div><span class="text-[9px] text-gray-500 block leading-tight">BPM</span><span class="text-base font-bold text-white" id="db-bpm">0.00</span></div>
+                            <div><span class="text-[9px] text-gray-500 block leading-tight">PITCH</span><span class="text-base font-bold text-white" id="db-pitch-val">+0.00%</span></div>
+                        </div>
+                        <canvas id="canvas-wave-b" class="absolute inset-0 w-full h-full opacity-60"></canvas>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex px-4 py-2 items-center justify-between flex-row-reverse">
+                    <div class="flex flex-col gap-4 w-16 items-end">
+                        <button class="btn-hw h-14 w-full rounded-full text-xl" id="db-btn-play" data-deck="B">▶</button>
+                        <button class="btn-hw h-14 w-full rounded-full text-xl text-pink-500" id="db-btn-cue" data-deck="B">C</button>
+                        <button class="btn-hw h-8 w-full text-[11px] mt-2" id="db-btn-sync" data-deck="B">SYNC</button>
+                    </div>
+                    
+                    <div class="jog-container">
+                        <div class="jog-wheel" id="db-jog" data-deck="B">
+                            <div class="jog-ring-outer"></div>
+                            <div class="jog-platter"><div class="jog-marker" id="db-jog-marker"></div></div>
+                            <div class="jog-screen">
+                                <div class="jog-cover" id="db-cover"></div>
+                                <span class="text-xs text-pink-500 z-10 font-bold" id="db-jog-bpm">0.0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-14 flex flex-col items-center">
+                        <div class="w-2 h-2 rounded-full bg-[#111] border border-gray-600 mb-2" id="db-pitch-zero"></div>
+                        <div class="fader-wrapper">
+                            <div class="fader-track pitch" id="db-pitch-track" data-deck="B"><div class="fader-handle handle-b" id="db-pitch-handle" style="bottom: 50%;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 pt-0">
+                    <div class="pad-grid">
+                        <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="0">C1</div>
+                        <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="1">C2</div>
+                        <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="2">C3</div>
+                        <div class="pad-hw pad-b btn-hc" data-deck="B" data-idx="3">C4</div>
+                        <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="1">1 B</div>
+                        <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="2">2 B</div>
+                        <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="4">4 B</div>
+                        <div class="pad-hw pad-b text-orange-400 btn-loop" data-deck="B" data-beats="8">8 B</div>
+                    </div>
+                </div>
+            </main>
+        </div>
 
         <aside class="area-lib">
-            <div class="w-48 border-r border-gray-800 flex flex-col bg-[#0a0a0c]">
-                <div class="h-8 border-b border-gray-800 flex items-center px-3">
-                    <span class="text-[10px] font-bold text-gray-400">PLAYLISTS</span>
+            <div class="w-64 border-r border-gray-800/50 flex flex-col bg-black/40">
+                <div class="h-12 border-b border-gray-800/50 flex items-center px-4 justify-between bg-black/60">
+                    <span class="text-sm font-bold text-gray-300">PLAYLISTS</span>
+                    <button class="text-gray-500 hover:text-white md:hidden" id="btn-close-lib-mobile">✕</button>
                 </div>
-                <div class="flex-1 overflow-y-auto p-2" id="lib-tree">
+                <div class="flex-1 overflow-y-auto" id="lib-tree">
                     </div>
             </div>
             
-            <div class="flex-1 flex flex-col bg-black overflow-hidden relative" id="lib-dropzone">
-                <div class="h-8 border-b border-gray-800 bg-[#0a0a0c] flex items-center px-2 justify-between">
-                    <input type="text" id="lib-search" class="w-48 bg-black border border-gray-700 text-white text-[10px] px-2 py-1 outline-none focus:border-cyan-500" placeholder="Search...">
-                    <span class="text-[9px] text-green-500 animate-pulse font-mono" id="net-status">INIT SYNC...</span>
+            <div class="flex-1 flex flex-col bg-transparent relative" id="lib-dropzone">
+                <div class="h-12 border-b border-gray-800/50 bg-black/60 flex items-center px-4 justify-between">
+                    <input type="text" id="lib-search" class="w-64 bg-black/50 border border-gray-600 text-white text-sm px-3 py-1.5 rounded outline-none focus:border-cyan-500 transition-colors" placeholder="Search track...">
+                    <span class="text-xs text-green-500 animate-pulse font-mono bg-black/50 px-2 py-1 rounded" id="net-status">INIT SYNC...</span>
                 </div>
-                <div class="absolute inset-0 top-8 flex items-center justify-center text-gray-700 text-xl font-bold font-mono tracking-widest pointer-events-none opacity-30">DROP AUDIO HERE</div>
+                <div class="absolute inset-0 top-12 flex items-center justify-center text-gray-400 text-3xl font-bold font-mono tracking-widest pointer-events-none opacity-20">DROP AUDIO FILE HERE</div>
                 <div class="flex-1 overflow-y-auto">
-                    <table class="w-full text-[10px] text-left relative z-10" style="border-collapse: collapse;">
-                        <thead class="sticky top-0 bg-[#111] text-gray-500 shadow-md">
-                            <tr><th class="p-2 w-8">#</th><th class="p-2">TITLE</th><th class="p-2 w-24">ARTIST</th><th class="p-2 w-16">LOAD</th></tr>
+                    <table class="w-full text-sm text-left relative z-10" style="border-collapse: collapse;">
+                        <thead class="sticky top-0 bg-[#0a0a0e] text-gray-400 shadow-md">
+                            <tr><th class="p-3 w-12 text-center">#</th><th class="p-3">TITLE</th><th class="p-3 w-1/4">ARTIST</th><th class="p-3 w-32 text-center">LOAD</th></tr>
                         </thead>
-                        <tbody id="lib-list" class="text-gray-300"></tbody>
+                        <tbody id="lib-list" class="text-gray-200"></tbody>
                     </table>
                 </div>
             </div>
         </aside>
+
+        <footer class="area-footer">
+            <button id="btn-toggle-lib" class="btn-hw px-12 h-8 text-cyan-400 font-bold tracking-[0.2em] rounded border border-[#223] hover:border-cyan-500 transition-all">▲ BROWSE LIBRARY ▲</button>
+        </footer>
 
     </div>
 
@@ -366,7 +403,7 @@
     <audio id="audio-B" crossorigin="anonymous"></audio>
 
     <script>
-        const bootSeq = ["INIT KERNEL V8.0.1...", "LOADING DSP...", "CONNECTING GITHUB API...", "SYSTEM READY."];
+        const bootSeq = ["INIT KERNEL V8.0.2...", "ALLOCATING LARGE JOGWHEELS...", "CONNECTING GITHUB API...", "SYSTEM READY."];
         async function runBoot() {
             const out = document.getElementById('term-output');
             for(let i=0; i<bootSeq.length; i++) {
@@ -385,7 +422,7 @@
         let powerMode = 'MAX';
         let actx;
 
-        // 系统级后台播放控制 (MediaSession API)
+        // 系统级后台播放控制 (MediaSession)
         const updateMediaSession = (title, artist, coverUrl) => {
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
@@ -441,7 +478,7 @@
                 this.state.cues = [null,null,null,null]; this.state.loop.active = false;
                 this.renderPads();
                 vis.drawStaticWave(this.id);
-                updateMediaSession(track.t, track.a, track.cover); // 触发后台登记
+                updateMediaSession(track.t, track.a, track.cover); 
             }
 
             play() { if(!this.audio.src) return; actx.resume(); this.audio.play(); this.state.playing = true; this.ui.btnPlay.classList.add('active', `glow-${this.id.toLowerCase()}`); }
@@ -553,7 +590,7 @@
             start() {
                 this.loop = this.loop.bind(this);
                 requestAnimationFrame(this.loop);
-                let leds = ''; for(let i=0; i<20; i++) leds += `<div class="vu-led" style="--c: ${i>17?'#f00':(i>14?'#fa0':'#0f0')}"></div>`;
+                let leds = ''; for(let i=0; i<25; i++) leds += `<div class="vu-led" style="--c: ${i>21?'#f00':(i>17?'#fa0':'#0f0')}"></div>`;
                 this.vuL.innerHTML = leds; this.vuR.innerHTML = leds;
             },
 
@@ -607,10 +644,10 @@
                     let vA = (Math.max(...oscA)-128)/128 * sys.deckA.gain.gain.value * sys.crossA.gain.value;
                     let vB = (Math.max(...oscB)-128)/128 * sys.deckB.gain.gain.value * sys.crossB.gain.value;
                     let mVol = (vA + vB) * sys.masterGain.gain.value * 2;
-                    let actLeds = Math.min(20, Math.floor(mVol * 20));
+                    let actLeds = Math.min(25, Math.floor(mVol * 25));
                     
                     let cL = this.vuL.children, cR = this.vuR.children;
-                    for(let i=0; i<20; i++) {
+                    for(let i=0; i<25; i++) {
                         cL[i].style.backgroundColor = i < actLeds ? cL[i].style.getPropertyValue('--c') : '#111';
                         cR[i].style.backgroundColor = i < actLeds*0.9 ? cR[i].style.getPropertyValue('--c') : '#111';
                     }
@@ -623,11 +660,27 @@
 
         const ui = {
             bindAll() {
+                // 曲库抽屉唤出/关闭逻辑
+                const toggleLib = () => {
+                    const libEl = document.querySelector('.area-lib');
+                    const btn = document.getElementById('btn-toggle-lib');
+                    libEl.classList.toggle('open');
+                    if(libEl.classList.contains('open')) {
+                        btn.innerText = '▼ CLOSE LIBRARY ▼';
+                        btn.classList.add('active', 'glow-a');
+                    } else {
+                        btn.innerText = '▲ BROWSE LIBRARY ▲';
+                        btn.classList.remove('active', 'glow-a');
+                    }
+                };
+                document.getElementById('btn-toggle-lib').addEventListener('click', toggleLib);
+                document.getElementById('btn-close-lib-mobile').addEventListener('click', () => { if(document.querySelector('.area-lib').classList.contains('open')) toggleLib(); });
+
                 document.getElementById('btn-power').addEventListener('click', (e) => {
                     powerMode = powerMode === 'MAX' ? 'ECO' : 'MAX';
                     e.target.innerText = powerMode === 'MAX' ? 'MAX POWER' : 'ECO MODE';
                     e.target.className = powerMode === 'MAX' ? 'btn-hw px-3 h-7 text-[10px] text-red-500 active glow-b' : 'btn-hw px-3 h-7 text-[10px] text-green-500 shadow-[0_0_10px_#0f0]';
-                    if (powerMode === 'ECO' && vis.ctxOsc) vis.ctxOsc.clearRect(0,0, vis.ctxOsc.canvas.width, vis.ctxOsc.canvas.height); // clear osc in eco
+                    if (powerMode === 'ECO' && vis.ctxOsc) vis.ctxOsc.clearRect(0,0, vis.ctxOsc.canvas.width, vis.ctxOsc.canvas.height);
                 });
 
                 const bindDrag = (els, type, cb) => {
@@ -661,20 +714,16 @@
                     const rect = track.getBoundingClientRect();
                     let isCross = track.classList.contains('cross'), pct = 0;
                     
-                    if(isCross) {
-                        // 横向逻辑有点特殊，用全局鼠标X获取更好，这里简化处理
-                        pct = 0.5; // 占位，需改为X轴抓取
-                    } else {
+                    if(!isCross) {
                         pct = 1.0 - ((curY - rect.top) / rect.height);
+                        pct = Math.max(0, Math.min(1, pct));
+                        handle.style.bottom = (pct*100)+'%';
+                        let dId = track.dataset.deck;
+                        if(track.classList.contains('vol')) sys[`deck${dId}`].setParam('gain', pct);
+                        if(track.classList.contains('pitch')) sys[`deck${dId}`].setPitch(1.0 - pct);
                     }
-                    pct = Math.max(0, Math.min(1, pct));
-                    handle.style.bottom = (pct*100)+'%';
-                    let dId = track.dataset.deck;
-                    if(track.classList.contains('vol')) sys[`deck${dId}`].setParam('gain', pct);
-                    if(track.classList.contains('pitch')) sys[`deck${dId}`].setPitch(1.0 - pct);
                 });
                 
-                // 修复 Crossfader X轴专属监听
                 const cross = document.querySelector('.fader-track.cross');
                 if(cross) {
                     let cDrag=false;
@@ -735,7 +784,6 @@
                     
                     this.db['Root'] = filterAudio(items);
                     
-                    // 抓取子文件夹
                     const folders = items.filter(i => i.type === 'dir');
                     for(let f of folders) {
                         this.ui.net.innerText = `FETCHING DIR: ${f.name.substring(0,8)}..`;
@@ -745,14 +793,16 @@
                     }
                     
                     this.ui.net.innerText = 'SYNC OK';
+                    this.ui.net.classList.remove('text-green-500', 'animate-pulse');
+                    this.ui.net.classList.add('text-cyan-500');
                     this.renderTree();
                     this.setPlaylist('Root');
-                } catch(e) { this.ui.net.innerText = 'API LIMIT / OFFLINE'; this.db['Local'] = []; this.renderTree(); }
+                } catch(e) { this.ui.net.innerText = 'API LIMIT / OFFLINE'; this.ui.net.classList.replace('text-green-500', 'text-red-500'); this.db['Local'] = []; this.renderTree(); }
             },
 
             renderTree() {
                 this.ui.tree.innerHTML = Object.keys(this.db).map(name => `
-                    <div class="text-[10px] text-gray-300 p-2 hover:bg-white/5 cursor-pointer truncate" onclick="lib.setPlaylist('${name}')">🗂️ ${name}</div>
+                    <div class="lib-folder cursor-pointer truncate" onclick="lib.setPlaylist('${name}')">🗂️ ${name}</div>
                 `).join('');
             },
 
@@ -764,27 +814,35 @@
 
             filter(q) {
                 let query = q.toLowerCase();
-                let all = this.db['Root'] || []; // 简化搜索范围
+                let all = this.db['Root'] || []; 
                 this.currentList = all.filter(t => t.t.toLowerCase().includes(query));
                 this.render();
             },
 
             render() {
                 this.ui.list.innerHTML = this.currentList.map((t, i) => `
-                    <tr class="border-b border-gray-800 hover:bg-gray-800 cursor-pointer ${i===this.selectedIdx ? 'bg-gray-800' : ''}" onclick="lib.select(${i})">
-                        <td class="p-2 text-gray-500">${i+1}</td>
-                        <td class="p-2 font-bold truncate max-w-[120px]">${t.t}</td>
-                        <td class="p-2 text-gray-400 truncate max-w-[80px]">${t.a}</td>
-                        <td class="p-2 flex gap-1">
-                            <button onclick="event.stopPropagation(); lib.loadTo('A', ${i})" class="px-2 py-0.5 bg-cyan-900 border border-cyan-500 text-cyan-400 rounded text-[9px] font-bold">A</button>
-                            <button onclick="event.stopPropagation(); lib.loadTo('B', ${i})" class="px-2 py-0.5 bg-pink-900 border border-pink-500 text-pink-400 rounded text-[9px] font-bold">B</button>
+                    <tr class="lib-track-row cursor-pointer border-b border-gray-800/50 ${i===this.selectedIdx ? 'active' : ''}" onclick="lib.select(${i})">
+                        <td class="p-3 text-gray-500 text-center">${i+1}</td>
+                        <td class="p-3 font-bold text-gray-200 truncate max-w-[200px] md:max-w-none">${t.t}</td>
+                        <td class="p-3 text-gray-400 truncate">${t.a}</td>
+                        <td class="p-3 flex justify-center gap-2">
+                            <button onclick="event.stopPropagation(); lib.loadTo('A', ${i})" class="px-4 py-1.5 bg-cyan-900 border border-cyan-500 text-cyan-400 rounded text-xs font-bold hover:bg-cyan-500 hover:text-black transition">A</button>
+                            <button onclick="event.stopPropagation(); lib.loadTo('B', ${i})" class="px-4 py-1.5 bg-pink-900 border border-pink-500 text-pink-400 rounded text-xs font-bold hover:bg-pink-500 hover:text-black transition">B</button>
                         </td>
                     </tr>
                 `).join('');
             },
             
             select(i) { this.selectedIdx = i; this.render(); },
-            loadTo(deckId, i) { sys[`deck${deckId}`].load(this.currentList[i]); },
+            
+            loadTo(deckId, i) { 
+                sys[`deck${deckId}`].load(this.currentList[i]); 
+                // 优雅地自动隐藏曲库
+                document.querySelector('.area-lib').classList.remove('open');
+                const btn = document.getElementById('btn-toggle-lib');
+                btn.innerText = '▲ BROWSE LIBRARY ▲';
+                btn.classList.remove('active', 'glow-a');
+            },
             
             setupDragDrop() {
                 const dz = document.getElementById('lib-dropzone');
